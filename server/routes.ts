@@ -117,30 +117,6 @@ export async function registerRoutes(
     }
   });
 
-  // Temporary route to create admin
-  app.get("/create-admin", async (req, res) => {
-    try {
-      const existingAdmin = await storage.getUserByUsername("admin@example.com");
-      if (existingAdmin) {
-        return res.send("Admin already exists");
-      }
-
-      const hashedPassword = await hashPassword("password123");
-      await storage.createUser({
-        username: "admin@example.com",
-        password: hashedPassword,
-        role: "super_admin",
-        isActive: true,
-        locationId: null,
-      });
-
-      res.send("Admin created");
-    } catch (err) {
-      console.error("Failed to create admin:", err);
-      res.status(500).send("Error creating admin");
-    }
-  });
-
   // Locations
   app.get(api.locations.list.path, requireAuth, async (req, res) => {
     const locations = await storage.getLocations();
