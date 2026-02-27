@@ -1,0 +1,144 @@
+You are working on an admin web app for a restaurant brand "Cactus Burrito Bar". There is already a "Menu" page that shows a flat list of menu items (Item Name, Category, Price, Status, Actions) and a button “Add Item”. 
+
+I need you to refactor and extend the menu management so that it supports a real self-service-kiosk style configuration with:
+
+1) MENU CATEGORIES
+2) MENU ITEMS inside categories
+3) STEP-BY-STEP CHOICES (modifiers) per item
+
+The waiter’s panel and self-service kiosk will share the same configuration, so the admin UI must be flexible and structured.
+
+### 1. Categories
+
+- Introduce a proper Category entity in the backend (if it does not already exist).  
+  Fields could be: `id`, `name`, `sortOrder`, `isActive`, `createdAt`, `updatedAt`.
+- On the “Menu” page:
+  - Keep the top-right restaurant selector as it is.
+  - Add a way to manage categories:
+    - Either a separate “Categories” tab or a “Manage Categories” button that opens a modal.
+  - In the categories management view:
+    - List all categories for the selected restaurant.
+    - Ability to:
+      - Create a new category (name, active/inactive).
+      - Rename a category.
+      - Deactivate/activate a category.
+      - Change the order of categories (e.g. with up/down arrows or drag & drop that updates `sortOrder`).
+
+- In the main “Menu” items table:
+  - Keep showing the Category column, but now it should use the real Category entity.
+  - In the “Add Item” / “Edit Item” form, Category must be selected from a dropdown of existing categories.
+
+### 2. Menu items
+
+There is already an Item entity. Extend it only as much as needed to support the new configuration:
+
+- Ensure each menu item references a `categoryId`.
+- Keep existing fields like name, price, status, etc.
+- Within a category, items need to be ordered:
+  - Add a `sortOrder` field per item.
+  - In the items table, add the ability to move items up/down within their category (or drag & drop).
+- The existing “Add Item” button should open a form where you can:
+  - Set basic information (name, category, base price, description, status, image, etc.).
+  - Configure the step-by-step options described below.
+
+### 3. Step-based choices for each menu item (core feature)
+
+We need a generic system that allows us to create a wizard-like flow for each menu item, similar to a kiosk.
+
+Design a data model in the backend similar to this (adapt to the current stack/ORM):
+
+- `ChoiceGroup` (a step in the flow)
+  - `id`
+  - `menuItemId` (which item this step belongs to)
+  - `name` (e.g. "Choose burrito or combo", "Choose burrito size", "Choose drink size")
+  - `stepOrder` (1, 2, 3… - defines the sequence)
+  - `required` (boolean – is this step mandatory)
+  - `minChoices` (usually 1)
+  - `maxChoices` (1 for radio-like choices, >1 if multiple selections are allowed)
+  - Optional conditional fields for dependencies:
+    - `dependsOnGroupId` (another ChoiceGroup that this one depends on)
+    - `dependsOnOptionId` (a specific ChoiceOption in that group – only show this group if that option was chosen)
+
+- `ChoiceOption`
+  - `id`
+  - `choiceGroupId`
+  - `name` (e.g. "Only burrito", "Combo", "Small", "Large", "Small drink", "Large drink", "Fries small", "Fries large", "Mango sauce", "Dessert" etc.)
+  - `priceDelta` (number – additional price relative to the base item price; can be 0)
+  - `isDefault` (boolean – default selection, if any)
+  - `sortOrder` (for ordering options inside the step)
+
+These structures must be stored in the database and loaded via API so they can be used later by the kiosk and waiter UIs.
+
+### 4. Admin UI for configuring steps & options
+
+When the admin clicks “Add Item” or edits an existing item, the item form should have two main sections:
+
+1) **Basic Info**
+   - Name
+   - Category (dropdown)
+   - Base Price
+   - Description
+   - Status (available / unavailable)
+   - Image upload (if supported already)
+   
+2) **Configuration / Steps (Choice Groups)**
+   - A visual list of steps in order (by `stepOrder`), something like cards:
+     - Each step card shows:
+       - Step name (editable input).
+       - Checkbox “Required”.
+       - Min choices / Max choices (numbers).
+       - Optional dependency:
+         - “Show only if”:
+           - Previous step (dropdown of existing ChoiceGroups with lower `stepOrder`).
+           - Specific option (dropdown of that group’s options).
+       - Inside the step card:
+         - A list of options with:
+           - Name input.
+           - Price delta input.
+           - Checkbox or radio to mark default option.
+           - Ability to add/remove options.
+           - Ability to reorder options (e.g. up/down arrows or drag & drop).
+
+   - The admin must be able to:
+     - Add a new step (adds a new ChoiceGroup with the next `stepOrder`).
+     - Delete a step (and its options).
+     - Reorder steps (update `stepOrder`).
+     - Add/remove/reorder options inside each step.
+
+Make sure the front-end sends and receives all this data using the existing API structure (extend as needed) and uses proper form validation and error handling.
+
+### 5. Burrito combo example (for you to test)
+
+For a burrito item (e.g. “Burrito Classic”), configure the flow like this:
+
+- Step 1: “Choose: only burrito or combo”
+  - Options:
+    - “Only burrito” (priceDelta: 0)
+    - “Combo” (priceDelta: +3.00)
+
+- Step 2: “Choose burrito size”
+  - Options:
+    - “Small” (priceDelta: 0)
+    - “Large” (priceDelta: +1.50)
+
+- Step 3: “Choose drink size”
+  - This step should be shown ONLY if in Step 1 the option “Combo” was selected.
+  - Options:
+    - “Small drink” (priceDelta: 0)
+    - “Large drink” (priceDelta: +0.50)
+
+- Step 4: “Choose fries size”
+  - Also only if “Combo” was selected in Step 1.
+  - Options:
+    - “Small fries”
+    - “Large fries” (+0.50 or whatever)
+
+- Step 5: “Add sauce or dessert?”
+  - Not required (optional).
+  - Options:
+    - “Sauce” (+0.80)
+    - “Dessert” (+1.50)
+
+Please implement the backend models/migrations, the necessary API endpoints, and the admin UI changes so that this kind of step-based configuration works end-to-end. Reuse the existing design system and styling of the Menu page (dark theme, table, buttons) so the new UI looks consistent.
+
+Do NOT remove existing working functionality (login, restaurant selector, current menu items). Extend and refactor the code cleanly, with clear types and comments where appropriate.
