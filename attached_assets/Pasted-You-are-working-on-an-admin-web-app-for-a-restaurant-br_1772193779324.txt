@@ -1,0 +1,86 @@
+You are working on an admin web app for a restaurant brand "Cactus Burrito Bar". On the “Menu” page there is already a table with columns: Item Name, Category, Price, Status, Actions, and a button “Add Item”. 
+
+Right now the Category is just a simple label on each item. I want you to implement a proper Category system for menu items, with basic management and ordering, without touching anything related to step-based modifiers or kiosk flows yet.
+
+### GOAL
+
+Implement **Menu Categories** with:
+- A Category model/table in the backend.
+- CRUD management UI for categories in the admin.
+- A real relationship between menu items and categories.
+- Simple ordering (sorting) of categories and items within a category.
+
+Keep the scope small and focused on categories only. Do NOT implement choice groups / options / kiosk steps in this task.
+
+---
+
+### 1. Backend: Category model
+
+Create a Category entity (adapt to the existing stack/ORM). Example fields:
+
+- `id` (primary key)
+- `restaurantId` (so different restaurants can have different categories, reuse existing restaurant model)
+- `name` (string, e.g. "Pamatēdieni", "Dzērieni", "Deserti")
+- `sortOrder` (integer, used for ordering categories in the UI)
+- `isActive` (boolean, default true)
+- `createdAt`, `updatedAt`
+
+Add the necessary migration to create this table.
+
+Update the existing `MenuItem` (or equivalent) model so that each item has:
+
+- `categoryId` (foreign key to Category)
+
+If the Category field is currently stored as plain text on the item, add a migration that:
+- Creates one default Category (e.g. “Pamatēdieni”) per restaurant or based on existing values.
+- Assigns existing items to some sensible default category so nothing breaks.
+- After that, Category on the item should be the foreign key, not a free text label.
+
+---
+
+### 2. Admin UI: Category management
+
+On the admin side, add a way to manage categories for the selected restaurant.
+
+Recommended approach (choose what fits the current code best):
+
+- Either:
+  - Add a “Categories” tab next to the “Menu” / “Items” tab
+- OR:
+  - Add a “Manage Categories” button on the “Menu” page that opens a modal.
+
+In the categories management view:
+
+- Show a list/table of categories for the currently selected restaurant.
+  - Columns: Category Name, Status (Active/Inactive), Sort order / Move up/down, Actions (Edit/Delete).
+- Allow admin to:
+  - Create a new category (name, active/inactive).
+  - Edit a category name and active status.
+  - Deactivate a category (but do not hard-delete if it has items).
+  - Reorder categories using up/down buttons or drag & drop, persisting the new `sortOrder` in the backend.
+
+Make sure the UI reuses the existing design system (dark theme, buttons, etc.) so it looks consistent with the current Menu page.
+
+---
+
+### 3. Update Menu Items UI to use categories
+
+On the existing “Menu” page:
+
+- The category column in the items table should now display the Category name from the new Category entity.
+- In the “Add Item” and “Edit Item” form:
+  - Replace any free-text category field with a dropdown that lists active categories for the current restaurant, ordered by `sortOrder`.
+  - The selected value should set the `categoryId` of the item.
+
+- Optionally (if it fits easily into the current code):
+  - Allow items to be reordered within a category:
+    - Add a `sortOrder` field or reuse existing ordering logic.
+    - Add small up/down buttons in the Actions column or a drag handle to change item order in the UI and persist it.
+
+---
+
+### 4. Constraints
+
+- Do NOT implement step-based options, modifiers, or kiosk-like flows in this change. Only categories and ordering.
+- Keep all existing working functionality (login, restaurant selector, menu loading) intact.
+- Write clean, well-typed code and keep the UI simple and consistent with the current design.
