@@ -4,15 +4,23 @@ import {
   users,
   locations,
   menuItems,
+  modifierGroups,
+  modifierOptions,
   type User,
   type InsertUser,
   type Location,
   type InsertLocation,
   type MenuItem,
   type InsertMenuItem,
+  type ModifierGroup,
+  type InsertModifierGroup,
+  type ModifierOption,
+  type InsertModifierOption,
   type UpdateUserRequest,
   type UpdateLocationRequest,
   type UpdateMenuItemRequest,
+  type UpdateModifierGroupRequest,
+  type UpdateModifierOptionRequest,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -35,6 +43,20 @@ export interface IStorage {
   createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem>;
   updateMenuItem(id: number, updates: UpdateMenuItemRequest): Promise<MenuItem>;
   deleteMenuItem(id: number): Promise<void>;
+
+  // Modifier Groups
+  getModifierGroups(locationId: number): Promise<ModifierGroup[]>;
+  getModifierGroup(id: number): Promise<ModifierGroup | undefined>;
+  createModifierGroup(group: InsertModifierGroup): Promise<ModifierGroup>;
+  updateModifierGroup(id: number, updates: UpdateModifierGroupRequest): Promise<ModifierGroup>;
+  deleteModifierGroup(id: number): Promise<void>;
+
+  // Modifier Options
+  getModifierOptions(groupId: number): Promise<ModifierOption[]>;
+  getModifierOption(id: number): Promise<ModifierOption | undefined>;
+  createModifierOption(option: InsertModifierOption): Promise<ModifierOption>;
+  updateModifierOption(id: number, updates: UpdateModifierOptionRequest): Promise<ModifierOption>;
+  deleteModifierOption(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -105,6 +127,54 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMenuItem(id: number): Promise<void> {
     await db.delete(menuItems).where(eq(menuItems.id, id));
+  }
+
+  // Modifier Groups
+  async getModifierGroups(locationId: number): Promise<ModifierGroup[]> {
+    return await db.select().from(modifierGroups).where(eq(modifierGroups.locationId, locationId));
+  }
+
+  async getModifierGroup(id: number): Promise<ModifierGroup | undefined> {
+    const [group] = await db.select().from(modifierGroups).where(eq(modifierGroups.id, id));
+    return group;
+  }
+
+  async createModifierGroup(group: InsertModifierGroup): Promise<ModifierGroup> {
+    const [newGroup] = await db.insert(modifierGroups).values(group).returning();
+    return newGroup;
+  }
+
+  async updateModifierGroup(id: number, updates: UpdateModifierGroupRequest): Promise<ModifierGroup> {
+    const [group] = await db.update(modifierGroups).set({ ...updates, updatedAt: new Date() }).where(eq(modifierGroups.id, id)).returning();
+    return group;
+  }
+
+  async deleteModifierGroup(id: number): Promise<void> {
+    await db.delete(modifierGroups).where(eq(modifierGroups.id, id));
+  }
+
+  // Modifier Options
+  async getModifierOptions(groupId: number): Promise<ModifierOption[]> {
+    return await db.select().from(modifierOptions).where(eq(modifierOptions.modifierGroupId, groupId));
+  }
+
+  async getModifierOption(id: number): Promise<ModifierOption | undefined> {
+    const [option] = await db.select().from(modifierOptions).where(eq(modifierOptions.id, id));
+    return option;
+  }
+
+  async createModifierOption(option: InsertModifierOption): Promise<ModifierOption> {
+    const [newOption] = await db.insert(modifierOptions).values(option).returning();
+    return newOption;
+  }
+
+  async updateModifierOption(id: number, updates: UpdateModifierOptionRequest): Promise<ModifierOption> {
+    const [option] = await db.update(modifierOptions).set({ ...updates, updatedAt: new Date() }).where(eq(modifierOptions.id, id)).returning();
+    return option;
+  }
+
+  async deleteModifierOption(id: number): Promise<void> {
+    await db.delete(modifierOptions).where(eq(modifierOptions.id, id));
   }
 }
 
