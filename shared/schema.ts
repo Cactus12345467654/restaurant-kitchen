@@ -35,6 +35,7 @@ export const menuItems = pgTable("menu_items", {
 export const modifierGroups = pgTable("modifier_groups", {
   id: serial("id").primaryKey(),
   locationId: integer("location_id").notNull().references(() => locations.id),
+  menuItemId: integer("menu_item_id").references(() => menuItems.id),
   name: text("name").notNull(),
   description: text("description"),
   sortOrder: integer("sort_order").notNull().default(0),
@@ -67,6 +68,10 @@ export const modifierGroupsRelations = relations(modifierGroups, ({ one, many })
     fields: [modifierGroups.locationId],
     references: [locations.id],
   }),
+  menuItem: one(menuItems, {
+    fields: [modifierGroups.menuItemId],
+    references: [menuItems.id],
+  }),
   options: many(modifierOptions),
 }));
 
@@ -77,11 +82,12 @@ export const modifierOptionsRelations = relations(modifierOptions, ({ one }) => 
   }),
 }));
 
-export const menuItemsRelations = relations(menuItems, ({ one }) => ({
+export const menuItemsRelations = relations(menuItems, ({ one, many }) => ({
   location: one(locations, {
     fields: [menuItems.locationId],
     references: [locations.id],
   }),
+  modifierGroups: many(modifierGroups),
 }));
 
 export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true });

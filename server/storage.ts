@@ -46,6 +46,7 @@ export interface IStorage {
 
   // Modifier Groups
   getModifierGroups(locationId: number): Promise<ModifierGroup[]>;
+  getModifierGroupsByMenuItem(menuItemId: number): Promise<ModifierGroup[]>;
   getModifierGroup(id: number): Promise<ModifierGroup | undefined>;
   createModifierGroup(group: InsertModifierGroup): Promise<ModifierGroup>;
   updateModifierGroup(id: number, updates: UpdateModifierGroupRequest): Promise<ModifierGroup>;
@@ -132,6 +133,10 @@ export class DatabaseStorage implements IStorage {
   // Modifier Groups
   async getModifierGroups(locationId: number): Promise<ModifierGroup[]> {
     return await db.select().from(modifierGroups).where(eq(modifierGroups.locationId, locationId));
+  }
+
+  async getModifierGroupsByMenuItem(menuItemId: number): Promise<ModifierGroup[]> {
+    return await db.select().from(modifierGroups).where(eq(modifierGroups.menuItemId, menuItemId));
   }
 
   async getModifierGroup(id: number): Promise<ModifierGroup | undefined> {
