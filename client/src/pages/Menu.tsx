@@ -14,6 +14,25 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit2, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+function ManageModifiersModal({ isOpen, onClose, itemName }: { isOpen: boolean, onClose: () => void, itemName: string }) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md bg-card border-border/50 rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl">Manage Modifiers</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-4 text-center">
+          <p className="font-medium text-foreground">{itemName}</p>
+          <p className="text-muted-foreground italic">Modifier configuration UI coming next step.</p>
+          <div className="pt-4 flex justify-end">
+            <Button onClick={onClose} className="rounded-xl">Close</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Menu() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -30,6 +49,7 @@ export default function Menu() {
   const deleteMutation = useDeleteMenuItem(selectedLocationId);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
@@ -244,6 +264,26 @@ export default function Menu() {
                 />
                 <Label htmlFor="isAvailable" className="cursor-pointer">Active</Label>
               </div>
+
+              {editingId && (
+                <div className="pt-4 border-t border-border/50 space-y-3">
+                  <div>
+                    <h4 className="font-display font-semibold text-foreground">Modifiers</h4>
+                    <p className="text-xs text-muted-foreground">Configuration preview (read-only)</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground italic">No modifiers configured yet.</p>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsModifiersModalOpen(true)}
+                    className="rounded-lg h-8 text-xs border-border/50 hover:bg-white/5"
+                  >
+                    Manage Modifiers
+                  </Button>
+                </div>
+              )}
+
               <div className="pt-4 flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-xl">Cancel</Button>
                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="rounded-xl">
@@ -254,6 +294,12 @@ export default function Menu() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <ManageModifiersModal 
+          isOpen={isModifiersModalOpen} 
+          onClose={() => setIsModifiersModalOpen(false)} 
+          itemName={formData.name}
+        />
       </div>
     </ProtectedRoute>
   );
