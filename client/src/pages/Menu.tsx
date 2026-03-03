@@ -174,7 +174,7 @@ export default function Menu() {
                       <TableCell className="font-medium">${(item.price / 100).toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge className={`rounded-md ${item.isAvailable ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' : 'bg-destructive/10 text-destructive hover:bg-destructive/20'}`}>
-                          {item.isAvailable ? 'Available' : 'Unavailable'}
+                          {item.isAvailable ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -242,7 +242,7 @@ export default function Menu() {
                   onChange={(e) => setFormData({...formData, isAvailable: e.target.checked})}
                   className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary bg-black/20"
                 />
-                <Label htmlFor="isAvailable" className="cursor-pointer">Currently Available</Label>
+                <Label htmlFor="isAvailable" className="cursor-pointer">Active</Label>
               </div>
               <div className="pt-4 flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-xl">Cancel</Button>
