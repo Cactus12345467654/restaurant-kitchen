@@ -2,8 +2,8 @@ import { useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
-import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem } from "@/hooks/use-menu";
-import { Card } from "@/components/ui/card";
+import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useMenuItemModifiers } from "@/hooks/use-menu";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,19 +14,58 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit2, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-function ManageModifiersModal({ isOpen, onClose, itemName }: { isOpen: boolean, onClose: () => void, itemName: string }) {
+function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId }: { isOpen: boolean, onClose: () => void, itemName: string, menuItemId: number | null }) {
+  const { data: modifierGroups, isLoading } = useMenuItemModifiers(menuItemId);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-card border-border/50 rounded-2xl">
+      <DialogContent className="sm:max-w-md bg-card border-border/50 rounded-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">Manage Modifiers</DialogTitle>
+          <DialogTitle className="font-display text-xl text-foreground">Manage Modifiers</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-4 text-center">
-          <p className="font-medium text-foreground">{itemName}</p>
-          <p className="text-muted-foreground italic">Modifier configuration UI coming next step.</p>
-          <div className="pt-4 flex justify-end">
-            <Button onClick={onClose} className="rounded-xl">Close</Button>
+        <div className="flex-1 overflow-y-auto pr-2 mt-4 space-y-4">
+          <div className="sticky top-0 bg-card pb-2 border-b border-border/50">
+            <p className="font-medium text-foreground">{itemName}</p>
           </div>
+
+          {isLoading ? (
+            <div className="py-8 flex flex-col items-center justify-center text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin mb-2" />
+              <p className="text-sm">Loading modifiers...</p>
+            </div>
+          ) : !modifierGroups || modifierGroups.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              <p className="text-sm italic">No modifiers configured for this item yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {modifierGroups.map((group: any) => (
+                <Card key={group.id} className="bg-black/20 border-border/50">
+                  <CardContent className="p-4">
+                    <h5 className="font-bold text-foreground mb-2">{group.name}</h5>
+                    <div className="space-y-1">
+                      {group.options?.map((option: any) => (
+                        <div key={option.id} className="text-sm text-muted-foreground flex justify-between items-center">
+                          <span>{option.name}</span>
+                          {option.priceDelta > 0 && (
+                            <span className="text-xs font-medium text-emerald-500">
+                              (+${(option.priceDelta / 100).toFixed(2)})
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {(!group.options || group.options.length === 0) && (
+                        <p className="text-xs text-muted-foreground italic">No options defined</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="pt-4 flex justify-end border-t border-border/50 mt-4">
+          <Button onClick={onClose} className="rounded-xl">Close</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -299,6 +338,7 @@ export default function Menu() {
           isOpen={isModifiersModalOpen} 
           onClose={() => setIsModifiersModalOpen(false)} 
           itemName={formData.name}
+          menuItemId={editingId}
         />
       </div>
     </ProtectedRoute>

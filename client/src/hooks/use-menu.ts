@@ -85,3 +85,16 @@ export function useDeleteMenuItem(locationId: number | null) {
     },
   });
 }
+
+export function useMenuItemModifiers(menuItemId: number | null) {
+  return useQuery<any[]>({
+    queryKey: ['menu-item-modifiers', menuItemId],
+    queryFn: async () => {
+      if (!menuItemId) return [];
+      const res = await fetch(`/api/menu-items/${menuItemId}/modifiers`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch modifiers");
+      return res.json();
+    },
+    enabled: !!menuItemId,
+  });
+}
