@@ -142,3 +142,35 @@ export function useCreateModifierOption(menuItemId: number | null) {
     },
   });
 }
+
+export function useDeleteModifierGroup(menuItemId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/modifier-groups/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete modifier group");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
+    },
+  });
+}
+
+export function useDeleteModifierOption(menuItemId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/modifier-options/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete modifier option");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
+    },
+  });
+}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
-import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useMenuItemModifiers, useCreateModifierGroup, useCreateModifierOption } from "@/hooks/use-menu";
+import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useMenuItemModifiers, useCreateModifierGroup, useCreateModifierOption, useDeleteModifierGroup, useDeleteModifierOption } from "@/hooks/use-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +78,8 @@ function ModifierOptionForm({ groupId, menuItemId, onCancel }: { groupId: number
 function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationId }: { isOpen: boolean, onClose: () => void, itemName: string, menuItemId: number | null, locationId: number | null }) {
   const { data: modifierGroups, isLoading } = useMenuItemModifiers(menuItemId);
   const createGroupMutation = useCreateModifierGroup(menuItemId);
+  const deleteGroupMutation = useDeleteModifierGroup(menuItemId);
+  const deleteOptionMutation = useDeleteModifierOption(menuItemId);
   const [isAddingGroup, setIsAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [addingOptionGroupId, setAddingOptionGroupId] = useState<number | null>(null);
@@ -96,6 +98,26 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationI
       setNewGroupName("");
       setIsAddingGroup(false);
       toast({ title: "Modifier group created" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteGroup = async (id: number) => {
+    if (!confirm("Delete this modifier group?")) return;
+    try {
+      await deleteGroupMutation.mutateAsync(id);
+      toast({ title: "Modifier group deleted" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteOption = async (id: number) => {
+    if (!confirm("Delete this option?")) return;
+    try {
+      await deleteOptionMutation.mutateAsync(id);
+      toast({ title: "Option deleted" });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
@@ -176,9 +198,17 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationI
           ) : (
             <div className="space-y-3">
               {modifierGroups.map((group: any) => (
-                <Card key={group.id} className="bg-black/20 border-border/50 hover:border-border transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-3">
+                <Card key={group.id} className="bg-black/20 border-border/50 hover:border-border transition-colors group">
+                  <CardContent className="p-4 relative">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteGroup(group.id)}
+                      className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 hover:bg-destructive/20 hover:text-destructive transition-all"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <div className="flex justify-between items-start mb-3 mr-8">
                       <h5 className="font-bold text-foreground">{group.name}</h5>
                       <Button 
                         variant="ghost" 
@@ -192,8 +222,18 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationI
 
                     <div className="space-y-1.5">
                       {group.options?.map((option: any) => (
-                        <div key={option.id} className="text-sm text-muted-foreground flex justify-between items-center py-1 border-b border-border/5 last:border-0">
-                          <span>{option.name}</span>
+                        <div key={option.id} className="text-sm text-muted-foreground flex justify-between items-center py-1 border-b border-border/5 last:border-0 group/option">
+                          <div className="flex items-center gap-2">
+                            <span>{option.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteOption(option.id)}
+                              className="h-5 w-5 opacity-0 group/option-hover:opacity-100 hover:text-destructive transition-all"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
                           {option.priceDelta > 0 && (
                             <span className="text-xs font-medium text-emerald-500">
                               (+${(option.priceDelta / 100).toFixed(2)})
