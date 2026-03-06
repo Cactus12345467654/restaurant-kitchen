@@ -98,3 +98,25 @@ export function useMenuItemModifiers(menuItemId: number | null) {
     enabled: !!menuItemId,
   });
 }
+
+export function useCreateModifierGroup(menuItemId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { name: string, locationId: number, menuItemId: number }) => {
+      const res = await fetch("/api/modifier-groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create modifier group");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
+    },
+  });
+}

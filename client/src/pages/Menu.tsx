@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
-import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useMenuItemModifiers } from "@/hooks/use-menu";
+import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useMenuItemModifiers, useCreateModifierGroup } from "@/hooks/use-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,19 +14,93 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit2, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId }: { isOpen: boolean, onClose: () => void, itemName: string, menuItemId: number | null }) {
+function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationId }: { isOpen: boolean, onClose: () => void, itemName: string, menuItemId: number | null, locationId: number | null }) {
   const { data: modifierGroups, isLoading } = useMenuItemModifiers(menuItemId);
+  const createGroupMutation = useCreateModifierGroup(menuItemId);
+  const [isAddingGroup, setIsAddingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const { toast } = useToast();
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim() || !menuItemId || !locationId) return;
+
+    try {
+      await createGroupMutation.mutateAsync({
+        name: newGroupName,
+        menuItemId,
+        locationId
+      });
+      setNewGroupName("");
+      setIsAddingGroup(false);
+      toast({ title: "Modifier group created" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md bg-card border-border/50 rounded-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl text-foreground">Manage Modifiers</DialogTitle>
+          <div className="flex justify-between items-center pr-6">
+            <DialogTitle className="font-display text-xl text-foreground">Manage Modifiers</DialogTitle>
+            <Button 
+              size="sm" 
+              onClick={() => setIsAddingGroup(true)}
+              className="rounded-lg h-8 text-xs shadow-lg shadow-primary/20"
+            >
+              <Plus className="w-3 h-3 mr-1" /> Add Modifier Group
+            </Button>
+          </div>
         </DialogHeader>
+        
         <div className="flex-1 overflow-y-auto pr-2 mt-4 space-y-4">
-          <div className="sticky top-0 bg-card pb-2 border-b border-border/50">
+          <div className="sticky top-0 bg-card pb-2 border-b border-border/50 z-10">
             <p className="font-medium text-foreground">{itemName}</p>
           </div>
+
+          {isAddingGroup && (
+            <Card className="bg-primary/5 border-primary/20 animate-in slide-in-from-top-2 duration-200">
+              <CardContent className="p-4">
+                <form onSubmit={handleCreateGroup} className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Group Name</Label>
+                    <Input 
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      placeholder="e.g. Choose Protein"
+                      autoFocus
+                      className="bg-black/20 border-border/50 h-9 text-sm rounded-lg"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setIsAddingGroup(false);
+                        setNewGroupName("");
+                      }}
+                      className="h-8 text-xs rounded-lg"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      size="sm" 
+                      disabled={createGroupMutation.isPending || !newGroupName.trim()}
+                      className="h-8 text-xs rounded-lg"
+                    >
+                      {createGroupMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                      Save Group
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
 
           {isLoading ? (
             <div className="py-8 flex flex-col items-center justify-center text-muted-foreground">
@@ -40,7 +114,7 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId }: { isOpe
           ) : (
             <div className="space-y-3">
               {modifierGroups.map((group: any) => (
-                <Card key={group.id} className="bg-black/20 border-border/50">
+                <Card key={group.id} className="bg-black/20 border-border/50 hover:border-border transition-colors">
                   <CardContent className="p-4">
                     <h5 className="font-bold text-foreground mb-2">{group.name}</h5>
                     <div className="space-y-1">
@@ -65,7 +139,7 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId }: { isOpe
           )}
         </div>
         <div className="pt-4 flex justify-end border-t border-border/50 mt-4">
-          <Button onClick={onClose} className="rounded-xl">Close</Button>
+          <Button onClick={onClose} variant="ghost" className="rounded-xl">Close</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -339,6 +413,7 @@ export default function Menu() {
           onClose={() => setIsModifiersModalOpen(false)} 
           itemName={formData.name}
           menuItemId={editingId}
+          locationId={selectedLocationId}
         />
       </div>
     </ProtectedRoute>
