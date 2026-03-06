@@ -120,3 +120,25 @@ export function useCreateModifierGroup(menuItemId: number | null) {
     },
   });
 }
+
+export function useCreateModifierOption(menuItemId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { name: string, priceDelta: number, modifierGroupId: number }) => {
+      const res = await fetch("/api/modifier-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create modifier option");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
+    },
+  });
+}

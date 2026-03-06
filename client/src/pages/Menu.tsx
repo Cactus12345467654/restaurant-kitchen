@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
-import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useMenuItemModifiers, useCreateModifierGroup } from "@/hooks/use-menu";
+import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useMenuItemModifiers, useCreateModifierGroup, useCreateModifierOption } from "@/hooks/use-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +11,76 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit2, Trash2, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, AlertCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+function ModifierOptionForm({ groupId, menuItemId, onCancel }: { groupId: number, menuItemId: number, onCancel: () => void }) {
+  const [name, setName] = useState("");
+  const [priceDeltaStr, setPriceDeltaStr] = useState("0");
+  const createOptionMutation = useCreateModifierOption(menuItemId);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    const priceDelta = Math.round(parseFloat(priceDeltaStr) * 100);
+    if (isNaN(priceDelta)) return;
+
+    try {
+      await createOptionMutation.mutateAsync({
+        name,
+        priceDelta,
+        modifierGroupId: groupId
+      });
+      onCancel();
+      toast({ title: "Option added" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 p-3 bg-black/40 rounded-lg border border-border/30 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Option Name</Label>
+          <Input 
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Large"
+            autoFocus
+            className="h-8 text-xs bg-black/20 border-border/50"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Extra Price ($)</Label>
+          <Input 
+            type="number"
+            step="0.01"
+            value={priceDeltaStr}
+            onChange={(e) => setPriceDeltaStr(e.target.value)}
+            className="h-8 text-xs bg-black/20 border-border/50"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-7 text-[10px] px-2">Cancel</Button>
+        <Button type="submit" size="sm" disabled={createOptionMutation.isPending || !name.trim()} className="h-7 text-[10px] px-2">
+          {createOptionMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+          Save Option
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationId }: { isOpen: boolean, onClose: () => void, itemName: string, menuItemId: number | null, locationId: number | null }) {
   const { data: modifierGroups, isLoading } = useMenuItemModifiers(menuItemId);
   const createGroupMutation = useCreateModifierGroup(menuItemId);
   const [isAddingGroup, setIsAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [addingOptionGroupId, setAddingOptionGroupId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const handleCreateGroup = async (e: React.FormEvent) => {
@@ -116,10 +178,21 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationI
               {modifierGroups.map((group: any) => (
                 <Card key={group.id} className="bg-black/20 border-border/50 hover:border-border transition-colors">
                   <CardContent className="p-4">
-                    <h5 className="font-bold text-foreground mb-2">{group.name}</h5>
-                    <div className="space-y-1">
+                    <div className="flex justify-between items-start mb-3">
+                      <h5 className="font-bold text-foreground">{group.name}</h5>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setAddingOptionGroupId(group.id)}
+                        className="h-7 text-[10px] px-2 border border-border/30 hover:bg-primary/10"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add Option
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1.5">
                       {group.options?.map((option: any) => (
-                        <div key={option.id} className="text-sm text-muted-foreground flex justify-between items-center">
+                        <div key={option.id} className="text-sm text-muted-foreground flex justify-between items-center py-1 border-b border-border/5 last:border-0">
                           <span>{option.name}</span>
                           {option.priceDelta > 0 && (
                             <span className="text-xs font-medium text-emerald-500">
@@ -128,10 +201,18 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationI
                           )}
                         </div>
                       ))}
-                      {(!group.options || group.options.length === 0) && (
+                      {(!group.options || group.options.length === 0) && !addingOptionGroupId && (
                         <p className="text-xs text-muted-foreground italic">No options defined</p>
                       )}
                     </div>
+
+                    {addingOptionGroupId === group.id && menuItemId && (
+                      <ModifierOptionForm 
+                        groupId={group.id} 
+                        menuItemId={menuItemId} 
+                        onCancel={() => setAddingOptionGroupId(null)} 
+                      />
+                    )}
                   </CardContent>
                 </Card>
               ))}
