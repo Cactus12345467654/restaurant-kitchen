@@ -285,6 +285,8 @@ export default function Menu() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  const { data: modifierGroups, isLoading: isLoadingModifiers } = useMenuItemModifiers(editingId);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -505,7 +507,22 @@ export default function Menu() {
                     <h4 className="font-display font-semibold text-foreground">Modifiers</h4>
                     <p className="text-xs text-muted-foreground">Configuration preview (read-only)</p>
                   </div>
-                  <p className="text-sm text-muted-foreground italic">No modifiers configured yet.</p>
+                  {isLoadingModifiers ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  ) : !modifierGroups || modifierGroups.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No modifiers configured yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {modifierGroups.map((group: any) => (
+                        <div key={group.id} className="text-sm">
+                          <span className="font-medium text-foreground">{group.name}:</span>{" "}
+                          <span className="text-muted-foreground">
+                            {group.options?.map((o: any) => o.name).join(", ") || "No options"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <Button 
                     type="button" 
                     variant="outline" 

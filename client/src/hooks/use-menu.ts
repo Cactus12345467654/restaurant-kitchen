@@ -115,7 +115,7 @@ export function useCreateModifierGroup(menuItemId: number | null) {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
     },
   });
@@ -137,7 +137,7 @@ export function useCreateModifierOption(menuItemId: number | null) {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
     },
   });
@@ -153,7 +153,7 @@ export function useDeleteModifierGroup(menuItemId: number | null) {
       });
       if (!res.ok) throw new Error("Failed to delete modifier group");
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
     },
   });
@@ -169,7 +169,7 @@ export function useDeleteModifierOption(menuItemId: number | null) {
       });
       if (!res.ok) throw new Error("Failed to delete modifier option");
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
     },
   });
