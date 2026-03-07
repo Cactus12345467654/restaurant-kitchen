@@ -265,5 +265,73 @@ export async function registerRoutes(
     });
   });
 
+  // Modifier Groups
+  app.get("/api/menu-items/:menuItemId/modifiers", requireAuth, async (req, res) => {
+    try {
+      const groups = await storage.getModifierGroupsByMenuItem(Number(req.params.menuItemId));
+      // For each group, get its options
+      const groupsWithOptions = await Promise.all(groups.map(async (group) => {
+        const options = await storage.getModifierOptionsByGroup(group.id);
+        return { ...group, options };
+      }));
+      res.json(groupsWithOptions);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch modifiers" });
+    }
+  });
+
+  app.post("/api/modifier-groups", requireAuth, async (req, res) => {
+    try {
+      const { name, menuItemId, locationId } = req.body;
+      if (!name || !menuItemId || !locationId) {
+        return res.status(400).json({ error: "Invalid modifier group data" });
+      }
+      const group = await storage.createModifierGroup({ 
+        name, 
+        menuItemId: Number(menuItemId), 
+        locationId: Number(locationId) 
+      });
+      res.status(201).json(group);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to create modifier group" });
+    }
+  });
+
+  app.delete("/api/modifier-groups/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteModifierGroup(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to delete modifier group" });
+    }
+  });
+
+  // Modifier Options
+  app.post("/api/modifier-options", requireAuth, async (req, res) => {
+    try {
+      const { name, priceDelta, modifierGroupId } = req.body;
+      if (!name || modifierGroupId === undefined) {
+        return res.status(400).json({ error: "Invalid modifier option data" });
+      }
+      const option = await storage.createModifierOption({ 
+        name, 
+        priceDelta: Number(priceDelta || 0), 
+        modifierGroupId: Number(modifierGroupId) 
+      });
+      res.status(201).json(option);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to create modifier option" });
+    }
+  });
+
+  app.delete("/api/modifier-options/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteModifierOption(Number(req.params.id));
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to delete modifier option" });
+    }
+  });
+
   return httpServer;
 }
