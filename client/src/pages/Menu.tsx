@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
@@ -76,7 +76,7 @@ function ModifierOptionForm({ groupId, menuItemId, onCancel }: { groupId: number
 }
 
 function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationId }: { isOpen: boolean, onClose: () => void, itemName: string, menuItemId: number | null, locationId: number | null }) {
-  const { data: modifierGroups, isLoading } = useMenuItemModifiers(menuItemId);
+  const { data: modifierGroups, isLoading, refetch } = useMenuItemModifiers(menuItemId);
   const createGroupMutation = useCreateModifierGroup(menuItemId);
   const deleteGroupMutation = useDeleteModifierGroup(menuItemId);
   const deleteOptionMutation = useDeleteModifierOption(menuItemId);
@@ -85,9 +85,21 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationI
   const [addingOptionGroupId, setAddingOptionGroupId] = useState<number | null>(null);
   const { toast } = useToast();
 
+  // Refetch when modal opens to ensure fresh data
+  useEffect(() => {
+    if (isOpen && menuItemId) {
+      refetch();
+    }
+  }, [isOpen, menuItemId, refetch]);
+
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newGroupName.trim() || !menuItemId || !locationId) return;
+    console.log(`[Frontend] Creating group: name=${newGroupName}, menuItemId=${menuItemId}, locationId=${locationId}`);
+    
+    if (!newGroupName.trim() || !menuItemId || !locationId) {
+      console.error("[Frontend] Missing required fields for group creation");
+      return;
+    }
 
     try {
       await createGroupMutation.mutateAsync({
@@ -99,6 +111,7 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationI
       setIsAddingGroup(false);
       toast({ title: "Modifier group created" });
     } catch (err: any) {
+      console.error("[Frontend] Group creation failed:", err);
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   };

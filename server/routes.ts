@@ -283,16 +283,22 @@ export async function registerRoutes(
   app.post("/api/modifier-groups", requireAuth, async (req, res) => {
     try {
       const { name, menuItemId, locationId } = req.body;
+      console.log(`[ModifierGroup] Creating: name=${name}, menuItemId=${menuItemId}, locationId=${locationId}`);
+      
       if (!name || !menuItemId || !locationId) {
         return res.status(400).json({ error: "Invalid modifier group data" });
       }
+      
       const group = await storage.createModifierGroup({ 
         name, 
         menuItemId: Number(menuItemId), 
         locationId: Number(locationId) 
       });
+      
+      console.log(`[ModifierGroup] Created successfully: ${JSON.stringify(group)}`);
       res.status(201).json(group);
     } catch (err) {
+      console.error(`[ModifierGroup] Creation failed:`, err);
       res.status(500).json({ error: "Failed to create modifier group" });
     }
   });
