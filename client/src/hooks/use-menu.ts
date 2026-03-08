@@ -96,6 +96,8 @@ export function useMenuItemModifiers(menuItemId: number | null) {
       return res.json();
     },
     enabled: !!menuItemId,
+    staleTime: 0,
+    gcTime: 1000 * 60 * 5,
   });
 }
 
@@ -115,8 +117,11 @@ export function useCreateModifierGroup(menuItemId: number | null) {
       }
       return res.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
+    onSuccess: async (newGroup) => {
+      const targetMenuItemId = newGroup.menuItemId || menuItemId;
+      console.log(`[Hook] Invalidating cache for menuItemId=${targetMenuItemId}`);
+      await queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', targetMenuItemId] });
+      console.log(`[Hook] Cache invalidated, refetching...`);
     },
   });
 }
@@ -137,8 +142,10 @@ export function useCreateModifierOption(menuItemId: number | null) {
       }
       return res.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
+    onSuccess: async () => {
+      console.log(`[Hook] Invalidating cache for menuItemId=${menuItemId}`);
+      await queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });
+      console.log(`[Hook] Cache invalidated, refetching...`);
     },
   });
 }

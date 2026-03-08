@@ -268,14 +268,22 @@ export async function registerRoutes(
   // Modifier Groups
   app.get("/api/menu-items/:menuItemId/modifiers", requireAuth, async (req, res) => {
     try {
-      const groups = await storage.getModifierGroupsByMenuItem(Number(req.params.menuItemId));
+      const menuItemId = Number(req.params.menuItemId);
+      console.log(`[GET /modifiers] Fetching modifiers for menuItemId=${menuItemId}`);
+      
+      const groups = await storage.getModifierGroupsByMenuItem(menuItemId);
+      console.log(`[GET /modifiers] Found ${groups.length} groups: ${JSON.stringify(groups)}`);
+      
       // For each group, get its options
       const groupsWithOptions = await Promise.all(groups.map(async (group) => {
         const options = await storage.getModifierOptionsByGroup(group.id);
         return { ...group, options };
       }));
+      
+      console.log(`[GET /modifiers] Returning: ${JSON.stringify(groupsWithOptions)}`);
       res.json(groupsWithOptions);
     } catch (err) {
+      console.error(`[GET /modifiers] Error:`, err);
       res.status(500).json({ error: "Failed to fetch modifiers" });
     }
   });

@@ -145,7 +145,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createModifierGroup(group: InsertModifierGroup): Promise<ModifierGroup> {
+    console.log(`[Storage] Creating modifier group with data:`, group);
     const [newGroup] = await db.insert(modifierGroups).values(group).returning();
+    console.log(`[Storage] Modifier group created:`, newGroup);
     return newGroup;
   }
 

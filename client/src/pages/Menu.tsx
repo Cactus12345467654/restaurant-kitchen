@@ -102,13 +102,21 @@ function ManageModifiersModal({ isOpen, onClose, itemName, menuItemId, locationI
     }
 
     try {
-      await createGroupMutation.mutateAsync({
+      const result = await createGroupMutation.mutateAsync({
         name: newGroupName,
         menuItemId,
         locationId
       });
+      console.log(`[Frontend] Group creation result:`, result);
+      
       setNewGroupName("");
       setIsAddingGroup(false);
+      
+      // Manually refetch to ensure immediate UI update
+      console.log(`[Frontend] Refetching modifiers after creation...`);
+      await refetch();
+      console.log(`[Frontend] Refetch complete`);
+      
       toast({ title: "Modifier group created" });
     } catch (err: any) {
       console.error("[Frontend] Group creation failed:", err);
