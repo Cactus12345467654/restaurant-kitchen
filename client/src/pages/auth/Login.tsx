@@ -37,11 +37,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden p-4 text-center">
       {/* Abstract Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
-
       <div className="w-full max-w-md">
         <div className="glass-panel p-8 md:p-10 rounded-3xl relative z-10">
           <div className="flex flex-col items-center mb-8">
