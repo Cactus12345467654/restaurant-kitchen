@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import { useMenuItems, useMenuItemModifiers } from "@/hooks/use-menu";
 import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Radio } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -245,9 +246,11 @@ type SidebarTab = "order" | "ready";
 const PAGER_NUMBERS = Array.from({ length: 16 }, (_, i) => i + 1);
 
 export default function WaiterView() {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { t } = useTranslation();
   const params = new URLSearchParams(window.location.search);
-  const locationId = Number(params.get("locationId")) || null;
+  const paramLocationId = Number(params.get("locationId")) || null;
+  const locationId = paramLocationId ?? user?.locationId ?? null;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<{
     id: number;
@@ -344,6 +347,13 @@ export default function WaiterView() {
   }, [menuItems]);
 
   if (!locationId) {
+    if (isAuthLoading && !paramLocationId) {
+      return (
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <p className="text-muted-foreground text-lg">{t("waiter.noLocation")}</p>
@@ -406,7 +416,7 @@ export default function WaiterView() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 [touch-action:manipulation]">
           {!selectedCategory ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {activeByCategory.map(([category, items]) => (
@@ -429,7 +439,7 @@ export default function WaiterView() {
                 <button
                   key={item.id}
                   onClick={() => handleProductClick({ id: item.id, name: item.name, price: item.price })}
-                  className="rounded-lg border border-border/50 bg-white/5 hover:bg-white/10 transition-colors overflow-hidden flex flex-col text-left"
+                  className="rounded-lg border border-border/50 bg-white/5 hover:bg-white/10 transition-colors overflow-hidden flex flex-col text-left [touch-action:manipulation]"
                 >
                   {item.imageUrl ? (
                     <img
