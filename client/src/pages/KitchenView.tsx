@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Badge } from "@/components/ui/badge";
 import { ORDER_STATUS } from "@/lib/order-status";
 import { useOrders, updateOrderStatus } from "@/lib/order-store";
-import { playNotificationBeep } from "@/lib/play-notification-sound";
+import { playNotificationBeep, preloadNotificationSound } from "@/lib/play-notification-sound";
 
 export default function KitchenView() {
   const { user } = useAuth();
@@ -17,6 +17,10 @@ export default function KitchenView() {
   const kitchenOrders = useOrders(ORDER_STATUS.GATAVOJAS);
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
   const isInitialMountRef = useRef(true);
+
+  useEffect(() => {
+    preloadNotificationSound();
+  }, []);
 
   useEffect(() => {
     const currentIds = new Set(kitchenOrders.map((o) => o.id));

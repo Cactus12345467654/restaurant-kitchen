@@ -61,3 +61,24 @@ export function useUpdateLocation() {
     },
   });
 }
+
+export function useDeleteLocation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      if (!Number.isFinite(id)) throw new Error("Invalid location ID");
+      const url = `/api/locations/${id}`;
+      const res = await fetch(url, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to delete location");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.locations.list.path] });
+    },
+  });
+}

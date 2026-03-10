@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
-import { useAuth, hasRole } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTranslation } from "@/i18n";
@@ -11,12 +11,12 @@ export default function Kitchen() {
   const { user } = useAuth();
   const { data: locations } = useLocations();
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    !hasRole(user, "super_admin") && user?.locationId ? user.locationId : null,
+    canSelectLocation(user) ? null : (user?.locationId ?? null),
   );
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (hasRole(user, "super_admin") && !selectedLocationId && locations?.length) {
+    if (canSelectLocation(user) && !selectedLocationId && locations?.length) {
       setSelectedLocationId(locations[0].id);
     }
   }, [user, locations, selectedLocationId]);
@@ -29,7 +29,7 @@ export default function Kitchen() {
           <p className="text-muted-foreground mt-1">Šeit būs virtuves darba vide.</p>
         </div>
 
-        {hasRole(user, "super_admin") && locations && locations.length > 0 && (
+        {canSelectLocation(user) && locations && locations.length > 0 && (
           <Select
             value={selectedLocationId?.toString() ?? ""}
             onValueChange={(v) => setSelectedLocationId(Number(v))}

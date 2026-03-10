@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { storage } from "./storage";
+import { initNewLocationConfig } from "./location-config";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import passport from "passport";
@@ -38,9 +39,6 @@ export async function registerRoutes(
   // Set up authentication first
   setupAuth(app);
 
-  // Serve uploaded files (public URLs)
-  app.use("/uploads", express.static(uploadsDir));
-
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -56,6 +54,31 @@ export async function registerRoutes(
     }
     next();
   };
+
+  // DELETE /api/locations/:id - use middleware to avoid Express 5 route matching issues
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.method !== "DELETE" || !/^\/api\/locations\/\d+$/.test(req.path)) {
+      return next();
+    }
+    const id = Number(req.path.split("/").pop());
+    requireAuth(req, res, () => {
+      requireRole(["super_admin", "manager"])(req, res, async () => {
+        try {
+          const location = await storage.getLocation(id);
+          if (!location) {
+            return res.status(404).json({ message: "Location not found" });
+          }
+          await storage.deleteLocation(id);
+          res.status(204).send();
+        } catch (err: any) {
+          res.status(500).json({ message: err?.message || "Internal server error" });
+        }
+      });
+    });
+  });
+
+  // Serve uploaded files (public URLs)
+  app.use("/uploads", express.static(uploadsDir));
 
   // Upload route on dedicated router so it is matched before any catch-all (e.g. Vite)
   const uploadRouter = express.Router();
@@ -222,11 +245,13 @@ export async function registerRoutes(
     res.json(locations);
   });
 
-  app.post(api.locations.create.path, requireAuth, requireRole(['super_admin']), async (req, res) => {
+  app.post(api.locations.create.path, requireAuth, requireRole(['super_admin', 'manager']), async (req, res) => {
     try {
       const input = api.locations.create.input.parse(req.body);
       const location = await storage.createLocation(input);
-      res.status(201).json(location);
+      await initNewLocationConfig(location.id);
+      const updated = await storage.getLocation(location.id);
+      res.status(201).json(updated ?? location);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -235,7 +260,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.locations.update.path, requireAuth, requireRole(['super_admin', 'location_admin']), async (req, res) => {
+  app.put(api.locations.update.path, requireAuth, requireRole(['super_admin', 'location_admin', 'manager']), async (req, res) => {
     try {
       const input = api.locations.update.input.parse(req.body);
       const location = await storage.updateLocation(Number(req.params.id), input);
@@ -250,10 +275,10 @@ export async function registerRoutes(
 
   // Users
   const usersRouter = express.Router();
-  usersRouter.use(requireAuth, requireRole(['super_admin', 'location_admin']));
+  usersRouter.use(requireAuth, requireRole(['super_admin', 'location_admin', 'manager']));
 
   // DELETE /api/users/:id - must be registered BEFORE router so it matches first
-  app.delete("/api/users/:id", requireAuth, requireRole(['super_admin', 'location_admin']), async (req, res) => {
+  app.delete("/api/users/:id", requireAuth, requireRole(['super_admin', 'location_admin', 'manager']), async (req, res) => {
     try {
       const targetId = Number(req.params.id);
       const currentUser = req.user as any;
@@ -269,7 +294,7 @@ export async function registerRoutes(
 
       const currentRoles = Array.isArray(currentUser?.roles) ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
       const targetRoles = Array.isArray((targetUser as any)?.roles) ? (targetUser as any).roles : ((targetUser as any)?.role ? [(targetUser as any).role] : []);
-      if (currentRoles.includes('location_admin')) {
+      if (currentRoles.includes('location_admin') || (currentRoles.includes('manager') && currentUser?.locationId)) {
         if (targetRoles.includes('super_admin')) {
           return res.status(403).json({ message: "Cannot delete super admin" });
         }
@@ -289,7 +314,7 @@ export async function registerRoutes(
     const user = req.user as any;
     const userRoles = Array.isArray(user?.roles) ? user.roles : (user?.role ? [user.role] : []);
     let users = await storage.getUsers();
-    if (userRoles.includes('location_admin')) {
+    if ((userRoles.includes('location_admin') || (userRoles.includes('manager') && user?.locationId)) && user?.locationId) {
       users = users.filter(u => u.locationId === user.locationId);
     }
     res.json(users);
@@ -300,7 +325,7 @@ export async function registerRoutes(
       const input = api.users.create.input.parse(req.body);
       const currentUser = req.user as any;
       const currentRoles = Array.isArray(currentUser?.roles) ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
-      if (currentRoles.includes('location_admin')) {
+      if (currentRoles.includes('location_admin') || (currentRoles.includes('manager') && currentUser?.locationId)) {
         input.locationId = currentUser.locationId;
         if (input.roles?.includes('super_admin')) {
           return res.status(403).json({ message: "Cannot create super_admin" });
@@ -321,12 +346,17 @@ export async function registerRoutes(
     try {
       const raw = api.users.update.input.parse(req.body) as Record<string, unknown>;
       const { role: _role, ...input } = raw;
-      if (input.password) {
-        input.password = await hashPassword(input.password as string);
-      }
+      const currentUser = req.user as any;
+      const currentRoles = Array.isArray(currentUser?.roles) ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
       const inputRoles = input.roles;
       if (inputRoles !== undefined && (!Array.isArray(inputRoles) || inputRoles.length === 0)) {
         return res.status(400).json({ message: "At least one role is required" });
+      }
+      if ((currentRoles.includes('location_admin') || (currentRoles.includes('manager') && currentUser?.locationId)) && inputRoles?.includes('super_admin')) {
+        return res.status(403).json({ message: "Cannot assign super_admin" });
+      }
+      if (input.password) {
+        input.password = await hashPassword(input.password as string);
       }
       const user = await storage.updateUser(Number(req.params.id), input as any);
       res.status(200).json(user);

@@ -13,6 +13,13 @@ export function hasRole(user: User | null | undefined, role: string): boolean {
   return getUserRoles(user).includes(role);
 }
 
+/** Super Admin and Restaurant Manager can select location in config sections (identical access). */
+export function canSelectLocation(user: User | null | undefined): boolean {
+  if (!user) return false;
+  const roles = getUserRoles(user);
+  return roles.includes("super_admin") || roles.includes("manager");
+}
+
 export function useAuth() {
   const queryClient = useQueryClient();
 

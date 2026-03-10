@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -10,10 +10,14 @@ export const session = pgTable("session", {
   expire: timestamp("expire", { withTimezone: true }).notNull(),
 });
 
+/** Location configuration shape - keys from reference template "Cactus Burrito Bar" */
+export type LocationConfig = Record<string, unknown>;
+
 export const locations = pgTable("locations", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   address: text("address").notNull(),
+  config: jsonb("config").$type<LocationConfig>().default({}),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

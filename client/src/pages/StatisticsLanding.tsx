@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
-import { useAuth, hasRole } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import {
   Select,
@@ -17,15 +17,15 @@ export default function StatisticsLanding() {
   const { user } = useAuth();
   const { data: locations } = useLocations();
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    !hasRole(user, "super_admin") && user?.locationId ? user.locationId : null,
+    canSelectLocation(user) ? null : (user?.locationId ?? null),
   );
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (hasRole(user, "super_admin") && !selectedLocationId && locations?.length) {
+    if (canSelectLocation(user) && !selectedLocationId && locations?.length) {
       setSelectedLocationId(locations[0].id);
     } else if (
-      !hasRole(user, "super_admin") &&
+      !canSelectLocation(user) &&
       user?.locationId &&
       selectedLocationId !== user.locationId
     ) {
@@ -43,7 +43,7 @@ export default function StatisticsLanding() {
           <p className="text-muted-foreground mt-1">{t("stats.screenSubtitle")}</p>
         </div>
 
-        {hasRole(user, "super_admin") && locations && locations.length > 0 && (
+        {canSelectLocation(user) && locations && locations.length > 0 && (
           <Select
             value={selectedLocationId?.toString() ?? ""}
             onValueChange={(v) => setSelectedLocationId(Number(v))}

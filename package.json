@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate-roles": "tsx script/migrate-role-to-roles.ts",
     "db:add-image-url": "tsx script/db-add-image-url.ts",
+    "db:sync-location-config": "tsx script/sync-location-config.ts",
     "create:first-admin": "tsx script/create-first-admin.ts"
   },
   "dependencies": {

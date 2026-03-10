@@ -58,11 +58,12 @@ export default function Users() {
   const openCreate = () => {
     setEditingId(null);
     const currentRoles = Array.isArray(currentUser?.roles) ? currentUser.roles : ((currentUser as any)?.role ? [(currentUser as any).role] : []);
+    const canSelectLocation = currentRoles.includes('super_admin') || (currentRoles.includes('manager') && !currentUser?.locationId);
     setFormData({ 
       username: "", 
       password: "", 
       roles: ["kitchen_staff"], 
-      locationId: !currentRoles.includes('super_admin') ? String(currentUser?.locationId) : "",
+      locationId: canSelectLocation ? "" : String(currentUser?.locationId ?? ""),
       isActive: true 
     });
     setIsDialogOpen(true);
@@ -133,7 +134,7 @@ export default function Users() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['super_admin', 'location_admin']}>
+    <ProtectedRoute allowedRoles={['super_admin', 'location_admin', 'manager']}>
       <div className="space-y-6 animate-in fade-in duration-500">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -250,7 +251,7 @@ export default function Users() {
                 <div className="space-y-2">
                   <Label>{t("users.role")}</Label>
                   <div className="rounded-xl border border-border/50 bg-black/20 p-3 space-y-2 min-h-[120px]">
-                    {ROLE_OPTIONS.filter(opt => opt.value !== 'super_admin' || hasRole(currentUser, 'super_admin')).map((opt) => (
+                    {ROLE_OPTIONS.filter(opt => opt.value !== 'super_admin' || hasRole(currentUser, 'super_admin') || hasRole(currentUser, 'manager')).map((opt) => (
                       <div key={opt.value} className="flex items-center space-x-2">
                         <Checkbox
                           id={`role-${opt.value}`}
@@ -277,7 +278,7 @@ export default function Users() {
                   <Select 
                     value={formData.locationId} 
                     onValueChange={(v) => setFormData({...formData, locationId: v})}
-                    disabled={formData.roles.includes('super_admin') || !hasRole(currentUser, 'super_admin')}
+                    disabled={formData.roles.includes('super_admin') || !(hasRole(currentUser, 'super_admin') || hasRole(currentUser, 'manager'))}
                   >
                     <SelectTrigger className="bg-black/20 border-border/50 rounded-xl h-11">
                       <SelectValue placeholder={t("users.selectLocation")} />

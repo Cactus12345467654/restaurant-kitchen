@@ -38,6 +38,7 @@ export interface IStorage {
   getLocation(id: number): Promise<Location | undefined>;
   createLocation(location: InsertLocation): Promise<Location>;
   updateLocation(id: number, updates: UpdateLocationRequest): Promise<Location>;
+  deleteLocation(id: number): Promise<void>;
 
   // Menu Items
   getMenuItems(locationId: number): Promise<MenuItem[]>;
@@ -140,6 +141,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(locations.id, id))
       .returning();
     return location;
+  }
+
+  async deleteLocation(id: number): Promise<void> {
+    const locationId = Number(id);
+    const groups = await db
+      .select()
+      .from(modifierGroups)
+      .where(eq(modifierGroups.locationId, locationId));
+    for (const g of groups) {
+      await db.delete(menuItemModifierGroups).where(eq(menuItemModifierGroups.modifierGroupId, g.id));
+      await db.delete(modifierOptions).where(eq(modifierOptions.modifierGroupId, g.id));
+      await db.delete(modifierGroups).where(eq(modifierGroups.id, g.id));
+    }
+    const items = await db.select().from(menuItems).where(eq(menuItems.locationId, locationId));
+    for (const item of items) {
+      await db.delete(menuItemModifierGroups).where(eq(menuItemModifierGroups.menuItemId, item.id));
+    }
+    await db.delete(menuItems).where(eq(menuItems.locationId, locationId));
+    await db.update(users).set({ locationId: null }).where(eq(users.locationId, locationId));
+    await db.delete(locations).where(eq(locations.id, locationId));
   }
 
   // Menu Items

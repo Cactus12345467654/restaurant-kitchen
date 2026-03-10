@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { useTranslation } from "@/i18n";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -24,19 +24,13 @@ import {
   MapPin,
 } from "lucide-react";
 
-function isSuperAdmin(user: { role?: string; roles?: string[] } | null | undefined) {
-  if (!user) return false;
-  if (Array.isArray(user.roles)) return user.roles.includes("super_admin");
-  return user.role === "super_admin";
-}
-
 export default function Dashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const { data: locations } = useLocations();
 
   const assignedLocationId = user?.locationId ?? null;
-  const showLocationSelector = isSuperAdmin(user);
+  const showLocationSelector = canSelectLocation(user);
 
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
     showLocationSelector ? null : assignedLocationId,
@@ -63,7 +57,7 @@ export default function Dashboard() {
               {t("dashboard.title")}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {isSuperAdmin(user)
+              {canSelectLocation(user)
                 ? t("dashboard.overviewAll")
                 : t("dashboard.overviewLocation")}
             </p>

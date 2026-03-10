@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTranslation } from "@/i18n";
@@ -10,17 +10,16 @@ import { useTranslation } from "@/i18n";
 export default function Waiter() {
   const { user } = useAuth();
   const { data: locations } = useLocations();
-  const userRoles = Array.isArray(user?.roles) ? user.roles : ((user as any)?.role ? [(user as any).role] : []);
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    !userRoles.includes("super_admin") && user?.locationId ? user.locationId : null,
+    canSelectLocation(user) ? null : (user?.locationId ?? null),
   );
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (userRoles.includes("super_admin") && !selectedLocationId && locations?.length) {
+    if (canSelectLocation(user) && !selectedLocationId && locations?.length) {
       setSelectedLocationId(locations[0].id);
     }
-  }, [user, userRoles, locations, selectedLocationId]);
+  }, [user, locations, selectedLocationId]);
 
   return (
     <ProtectedRoute allowedRoles={["super_admin", "location_admin", "manager", "waiter"]}>
@@ -30,7 +29,7 @@ export default function Waiter() {
           <p className="text-muted-foreground mt-1">Šeit būs viesmīļa darba vide.</p>
         </div>
 
-        {userRoles.includes("super_admin") && locations && locations.length > 0 && (
+        {canSelectLocation(user) && locations && locations.length > 0 && (
           <Select
             value={selectedLocationId?.toString() ?? ""}
             onValueChange={(v) => setSelectedLocationId(Number(v))}

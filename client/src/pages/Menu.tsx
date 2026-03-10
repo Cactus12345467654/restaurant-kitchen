@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, Fragment, useRef } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth, hasRole } from "@/hooks/use-auth";
+import { useAuth, hasRole, canSelectLocation } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import {
   useMenuItems,
@@ -956,18 +956,18 @@ export default function Menu() {
   const { toast } = useToast();
   const { t } = useTranslation();
 
-  // Admin needs to select location. Managers/Location Admins use their own.
+  // Super Admin and Manager can select location; others use their assigned location.
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    !hasRole(user, "super_admin") && user?.locationId ? user.locationId : null,
+    canSelectLocation(user) ? null : (user?.locationId ?? null),
   );
 
   const queryClient = useQueryClient();
   const { data: locations } = useLocations();
   const { data: menuItems, isLoading, isError, refetch } = useMenuItems(selectedLocationId);
 
-  // Auto-select first location for super_admin so menu loads immediately
+  // Auto-select first location for super_admin/manager so menu loads immediately
   useEffect(() => {
-    if (hasRole(user, "super_admin") && locations?.length && selectedLocationId == null) {
+    if (canSelectLocation(user) && locations?.length && selectedLocationId == null) {
       setSelectedLocationId(locations[0].id);
     }
   }, [user, locations, selectedLocationId]);
@@ -1311,7 +1311,7 @@ export default function Menu() {
           </div>
 
           <div className="flex items-center gap-4 w-full sm:w-auto">
-            {hasRole(user, "super_admin") && (
+            {canSelectLocation(user) && (
               <Select
                 value={selectedLocationId?.toString() || ""}
                 onValueChange={(val) => setSelectedLocationId(parseInt(val))}

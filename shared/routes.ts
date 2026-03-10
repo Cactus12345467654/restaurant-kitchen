@@ -92,7 +92,7 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/locations' as const,
-      input: insertLocationSchema,
+      input: insertLocationSchema.omit({ config: true }),
       responses: {
         201: z.custom<typeof locations.$inferSelect>(),
         400: errorSchemas.validation,
@@ -105,6 +105,14 @@ export const api = {
       responses: {
         200: z.custom<typeof locations.$inferSelect>(),
         400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/locations/:id' as const,
+      responses: {
+        204: z.void(),
         404: errorSchemas.notFound,
       },
     },

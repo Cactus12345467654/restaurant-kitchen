@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth, hasRole } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { useLocationModifierGroups } from "@/hooks/use-menu";
 import { useTranslation } from "@/i18n";
@@ -20,11 +20,11 @@ export default function Modifiers() {
   const { t } = useTranslation();
   const { data: locations } = useLocations();
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    !hasRole(user, "super_admin") ? (user?.locationId ?? null) : null
+    canSelectLocation(user) ? null : (user?.locationId ?? null)
   );
 
   useEffect(() => {
-    if (hasRole(user, "super_admin") && locations?.length && selectedLocationId == null) {
+    if (canSelectLocation(user) && locations?.length && selectedLocationId == null) {
       setSelectedLocationId(locations[0].id);
     }
   }, [user, locations, selectedLocationId]);
@@ -42,7 +42,7 @@ export default function Modifiers() {
             </p>
           </div>
 
-          {hasRole(user as any, "super_admin") && locations && locations.length > 1 && (
+          {canSelectLocation(user) && locations && locations.length > 1 && (
             <Select
               value={selectedLocationId != null ? String(selectedLocationId) : ""}
               onValueChange={(val) => setSelectedLocationId(Number(val))}

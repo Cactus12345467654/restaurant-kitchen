@@ -85,6 +85,9 @@ export const en: Record<TranslationKey, string> = {
   "locations.updated": "Location updated successfully",
   "locations.created_toast": "Location created successfully",
   "locations.createLocation": "Create Location",
+  "locations.deleteLocation": "Delete Location",
+  "locations.deleteConfirm": "Are you sure you want to delete this location? All menu items, modifiers, and related data will be removed. Users assigned to this location will be unassigned. This action cannot be undone.",
+  "locations.deleted": "Location deleted",
 
   // Users / Staff
   "users.title": "Staff Management",

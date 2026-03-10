@@ -45,7 +45,7 @@ export function AppSidebar() {
       title: t("nav.locations"),
       icon: MapPin,
       href: "/locations",
-      roles: ["super_admin"],
+      roles: ["super_admin", "manager"],
     },
     {
       title: t("nav.menu"),
@@ -63,7 +63,7 @@ export function AppSidebar() {
       title: t("nav.users"),
       icon: UsersIcon,
       href: "/users",
-      roles: ["super_admin", "location_admin"],
+      roles: ["super_admin", "location_admin", "manager"],
     },
     {
       title: t("nav.waiter"),
