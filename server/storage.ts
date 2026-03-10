@@ -191,6 +191,7 @@ export class DatabaseStorage implements IStorage {
       pagerNumber: row.pagerNumber,
       pagerCalled: row.pagerCalled ?? false,
       totalPriceCents: row.totalPriceCents,
+      createdAt: row.createdAt?.toISOString() ?? null,
       completedAt: row.completedAt?.toISOString() ?? null,
     };
   }
@@ -208,6 +209,7 @@ export class DatabaseStorage implements IStorage {
       pagerNumber: r.pagerNumber,
       pagerCalled: r.pagerCalled ?? false,
       totalPriceCents: r.totalPriceCents,
+      createdAt: r.createdAt?.toISOString() ?? null,
       completedAt: r.completedAt?.toISOString() ?? null,
     }));
   }
@@ -224,6 +226,7 @@ export class DatabaseStorage implements IStorage {
       pagerNumber: r.pagerNumber,
       pagerCalled: r.pagerCalled ?? false,
       totalPriceCents: r.totalPriceCents,
+      createdAt: r.createdAt?.toISOString() ?? null,
       completedAt: r.completedAt?.toISOString() ?? null,
     }));
   }

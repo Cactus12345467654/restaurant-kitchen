@@ -37,6 +37,15 @@ export const defaultFilters: OrdersFiltersState = {
   searchText: "",
 };
 
+function toISODateTime(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${day}T${h}:${min}`;
+}
+
 function loadFilters(): OrdersFiltersState {
   try {
     const raw = localStorage.getItem(FILTER_STORAGE_KEY);
@@ -55,7 +64,13 @@ function loadFilters(): OrdersFiltersState {
       return { ...defaultFilters, ...migrated };
     }
   } catch {}
-  return { ...defaultFilters };
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return {
+    ...defaultFilters,
+    datetimeFrom: toISODateTime(todayStart),
+    datetimeTo: toISODateTime(now),
+  };
 }
 
 function saveFilters(f: OrdersFiltersState) {
@@ -209,6 +224,7 @@ export function OrdersStatisticsFilters({
               placeholder={t("statsOrders.searchPlaceholder")}
               value={filters.searchText}
               onChange={(e) => update({ searchText: e.target.value })}
+              onKeyDown={(e) => e.key === "Enter" && onSearch()}
               className="h-9 bg-background/50"
             />
           </div>
@@ -231,12 +247,24 @@ export function OrdersStatisticsFilters({
   );
 }
 
+function getClearedFilters(): OrdersFiltersState {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return {
+    ...defaultFilters,
+    datetimeFrom: toISODateTime(todayStart),
+    datetimeTo: toISODateTime(now),
+  };
+}
+
 export function useOrdersFiltersState() {
   const [filters, setFilters] = useState<OrdersFiltersState>(loadFilters);
 
-  const clearFilters = () => {
-    setFilters({ ...defaultFilters });
-    saveFilters(defaultFilters);
+  const clearFilters = (): OrdersFiltersState => {
+    const cleared = getClearedFilters();
+    setFilters(cleared);
+    saveFilters(cleared);
+    return cleared;
   };
 
   return { filters, setFilters, clearFilters };

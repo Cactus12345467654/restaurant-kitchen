@@ -518,10 +518,13 @@ export async function registerRoutes(
   app.get("/api/orders", requireAuth, requireRole(["super_admin", "location_admin", "manager"]), async (req, res) => {
     try {
       const locationIdParam = req.query.locationId;
-      const locationId = locationIdParam != null ? Number(locationIdParam) : null;
-      const user = req.user as { locationId?: number } | undefined;
-      const effectiveLocationId = locationId ?? (user?.locationId ?? null);
-      const ordersList = await storage.getAllOrders(Number.isFinite(effectiveLocationId) ? effectiveLocationId : undefined);
+      const locationId = locationIdParam != null && locationIdParam !== "" ? Number(locationIdParam) : null;
+      const user = req.user as { locationId?: number; location_id?: number } | undefined;
+      const userLocId = user?.locationId ?? user?.location_id ?? null;
+      const effectiveLocationId = locationId ?? userLocId;
+      const ordersList = await storage.getAllOrders(
+        effectiveLocationId != null && Number.isFinite(effectiveLocationId) ? effectiveLocationId : undefined
+      );
       return res.json(ordersList);
     } catch (err: any) {
       return res.status(500).json({ message: err?.message || "Failed to fetch orders" });

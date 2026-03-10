@@ -1,15 +1,9 @@
-import type { SharedOrder } from "@/lib/order-store";
+import { getOrderTimestamp, type SharedOrder } from "@/lib/order-store";
 
 /** Extract base product name (without modifiers). "Rīsu burito (Halapenjo)" → "Rīsu burito" */
 export function getBaseProductName(item: string): string {
   const idx = item.indexOf(" (");
   return idx >= 0 ? item.slice(0, idx).trim() : item.trim();
-}
-
-/** Order timestamp from id (numeric). */
-function orderTimestamp(order: SharedOrder): number {
-  const n = Number(order.id);
-  return isNaN(n) ? 0 : n;
 }
 
 /** Group product sales by day. Returns Map<productName, Map<day, quantity>> */
@@ -24,7 +18,7 @@ export function groupProductSalesByDay(
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999).getTime();
 
   for (const order of orders) {
-    const ts = orderTimestamp(order);
+    const ts = getOrderTimestamp(order);
     if (ts < monthStart || ts > monthEnd) continue;
 
     const date = new Date(ts);

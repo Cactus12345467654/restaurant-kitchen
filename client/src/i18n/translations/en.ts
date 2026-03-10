@@ -382,6 +382,7 @@ export const en: Record<TranslationKey, string> = {
   "statsOrders.statusAtdots": "Delivered",
   "statsOrders.totalRecords": "Total records",
   "statsOrders.noOrders": "No orders",
+  "statsOrders.noDataHint": "Try clearing filters or check the date range",
   "statsOrders.colOrderNo": "Order no.",
   "statsOrders.colPager": "Pager / no.",
   "statsOrders.colAccepted": "Accepted",

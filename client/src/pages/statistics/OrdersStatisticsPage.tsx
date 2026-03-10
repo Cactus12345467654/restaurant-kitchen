@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "@/i18n";
-import { useAllOrders } from "@/lib/order-store";
+import { useAllOrders, getOrderTimestamp } from "@/lib/order-store";
 import {
   OrdersStatisticsFilters,
   useOrdersFiltersState,
@@ -11,12 +11,6 @@ import {
   OrdersStatisticsTable,
   mapOrderToStatisticsRow,
 } from "./OrdersStatisticsTable";
-
-/** Order id is ~timestamp; use for sorting/filtering by datetime */
-function orderTimestamp(orderId: string): number {
-  const n = Number(orderId);
-  return isNaN(n) ? 0 : n;
-}
 
 function filterOrders(
   orders: ReturnType<typeof useAllOrders>,
@@ -33,7 +27,7 @@ function filterOrders(
       );
       if (!matchId && !matchItems) return false;
     }
-    const ts = orderTimestamp(o.id);
+    const ts = getOrderTimestamp(o);
     if (filters.datetimeFrom) {
       const from = new Date(filters.datetimeFrom).getTime();
       if (ts < from) return false;
@@ -50,15 +44,19 @@ const PAGE_SIZES = [25, 50, 100] as const;
 
 export function OrdersStatisticsPage({ locationId }: { locationId?: number | null }) {
   const { t } = useTranslation();
-  const orders = useAllOrders(locationId);
   const { filters, setFilters, clearFilters } = useOrdersFiltersState();
   const [appliedFilters, setAppliedFilters] = useState<FiltersState>(() => filters);
+  const fetchLocationId =
+    appliedFilters.locationId && Number(appliedFilters.locationId)
+      ? Number(appliedFilters.locationId)
+      : locationId ?? undefined;
+  const orders = useAllOrders(fetchLocationId);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
   const filteredAndSortedOrders = useMemo(() => {
     const filtered = filterOrders(orders, appliedFilters);
-    return [...filtered].sort((a, b) => orderTimestamp(b.id) - orderTimestamp(a.id));
+    return [...filtered].sort((a, b) => getOrderTimestamp(b) - getOrderTimestamp(a));
   }, [orders, appliedFilters]);
 
   const rows = useMemo(() => {
@@ -78,8 +76,8 @@ export function OrdersStatisticsPage({ locationId }: { locationId?: number | nul
   };
 
   const handleClear = () => {
-    clearFilters();
-    setAppliedFilters(defaultFilters);
+    const cleared = clearFilters();
+    setAppliedFilters(cleared);
     setPage(1);
   };
 
@@ -100,6 +98,11 @@ export function OrdersStatisticsPage({ locationId }: { locationId?: number | nul
 
       <p className="text-sm text-muted-foreground">
         {t("statsOrders.totalRecords")}: <strong>{rows.length}</strong>
+        {rows.length === 0 && (
+          <span className="ml-2 text-muted-foreground">
+            ({t("statsOrders.noDataHint")})
+          </span>
+        )}
       </p>
 
       <OrdersStatisticsTable

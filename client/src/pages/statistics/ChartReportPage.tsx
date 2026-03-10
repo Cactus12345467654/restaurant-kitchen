@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "@/i18n";
 import { useAllOrders } from "@/lib/order-store";
 import { ORDER_STATUS } from "@/lib/order-status";
-import type { SharedOrder } from "@/lib/order-store";
+import { getOrderTimestamp, type SharedOrder } from "@/lib/order-store";
 import {
   BarChart,
   Bar,
@@ -29,11 +29,6 @@ const COMPLETED_STATUSES = [
 
 function isCompleted(status: string): boolean {
   return COMPLETED_STATUSES.includes(status as (typeof COMPLETED_STATUSES)[number]);
-}
-
-function orderTimestamp(order: SharedOrder): number {
-  const n = Number(order.id);
-  return isNaN(n) ? 0 : n;
 }
 
 function getTotalCents(order: SharedOrder): number {
@@ -115,7 +110,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
     let weekRev = 0;
 
     for (const order of orders) {
-      const ts = orderTimestamp(order);
+      const ts = getOrderTimestamp(order);
       const created = new Date(ts);
       const totalCents = getTotalCents(order);
       const completedAt = getCompletedAt(order);

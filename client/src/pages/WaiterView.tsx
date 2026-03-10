@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMenuItems, useMenuItemModifiers } from "@/hooks/use-menu";
 import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Radio } from "lucide-react";
+import { resolveImageUrl } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation, LanguageSwitcher } from "@/i18n";
 import { ORDER_STATUS } from "@/lib/order-status";
@@ -466,12 +467,9 @@ export default function WaiterView() {
                   onClick={() => handleProductClick({ id: item.id, name: item.name, price: item.price })}
                   className="rounded-lg border border-border/50 bg-white/5 hover:bg-white/10 transition-colors overflow-hidden flex flex-col text-left [touch-action:manipulation]"
                 >
-                  {(item.imageUrl ?? item.image_url) ? (
+                  {resolveImageUrl(item) ? (
                     <img
-                      src={(() => {
-                        const url = item.imageUrl ?? item.image_url;
-                        return url?.startsWith("/") ? window.location.origin + url : url;
-                      })()}
+                      src={resolveImageUrl(item)!}
                       alt={item.name}
                       className="w-full h-32 object-cover"
                       loading="lazy"

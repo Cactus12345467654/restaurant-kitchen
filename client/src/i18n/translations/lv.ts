@@ -380,6 +380,7 @@ export const lv = {
   "statsOrders.statusAtdots": "Atdots klientam",
   "statsOrders.totalRecords": "Kopā ieraksti",
   "statsOrders.noOrders": "Nav pasūtījumu",
+  "statsOrders.noDataHint": "Izmēģiniet notīrīt filtrus vai pārbaudīt datuma diapazonu",
   "statsOrders.colOrderNo": "Pasūtījuma nr.",
   "statsOrders.colPager": "Peidžeris / nr.",
   "statsOrders.colAccepted": "Pieņemts",

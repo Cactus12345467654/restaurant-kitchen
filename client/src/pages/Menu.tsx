@@ -59,6 +59,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit2, Trash2, Loader2, AlertCircle, X, ChevronDown, ChevronRight, MoreVertical, GripVertical, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/i18n";
+import { resolveImageUrl } from "@/lib/utils";
 
 function ModifierOptionForm({
   groupId,
@@ -881,13 +882,17 @@ function MenuItemPreviewModal({
             {t("preview.title")}
           </DialogTitle>
           <div className="mt-2 space-y-2">
-            {imageUrl ? (
+            {resolveImageUrl({ imageUrl }) ? (
               <img
-                src={imageUrl}
+                src={resolveImageUrl({ imageUrl })!}
                 alt=""
                 className="w-full max-w-[200px] h-[150px] object-cover rounded-xl border border-border/50 bg-black/20"
               />
-            ) : null}
+            ) : (
+              <div className="w-full max-w-[200px] h-[150px] rounded-xl border border-border/50 bg-white/5 flex items-center justify-center">
+                <span className="text-muted-foreground text-lg">—</span>
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">{itemName}</p>
           </div>
         </DialogHeader>
@@ -1571,9 +1576,9 @@ export default function Menu() {
                                   >
                                     <GripVertical className="h-4 w-4" />
                                   </span>
-                                  {item.imageUrl ? (
+                                  {resolveImageUrl(item) ? (
                                     <img
-                                      src={item.imageUrl}
+                                      src={resolveImageUrl(item)!}
                                       alt=""
                                       className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-md border border-border/50 bg-black/20 shrink-0"
                                     />
@@ -1681,10 +1686,10 @@ export default function Menu() {
               <div className="space-y-2">
                 <Label>{t("menu.itemImage")}</Label>
                 <div className="flex flex-col gap-3">
-                  {formData.imageUrl ? (
+                  {resolveImageUrl(formData) ? (
                     <div className="flex items-start gap-3">
                       <img
-                        src={formData.imageUrl}
+                        src={resolveImageUrl(formData)!}
                         alt="Item"
                         className="w-24 h-24 object-cover rounded-lg border border-border/50 bg-black/20"
                       />

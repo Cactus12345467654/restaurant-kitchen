@@ -79,12 +79,16 @@ export function mapOrderToStatisticsRow(
     .join("; ");
   const mods = modifiersContent || FALLBACK;
 
-  const ts = Number(order.id);
+  const ts = order.createdAt
+    ? new Date(order.createdAt).getTime()
+    : Number(order.id);
   const acceptedDate = !isNaN(ts) && ts > 0 ? new Date(ts) : new Date();
   const acceptedAt =
-    !isNaN(ts) && ts > 0
-      ? format(acceptedDate, "yyyy-MM-dd HH:mm")
-      : `${new Date().toISOString().slice(0, 10)} ${order.time}`;
+    order.createdAt
+      ? format(new Date(order.createdAt), "yyyy-MM-dd HH:mm")
+      : !isNaN(ts) && ts > 0
+        ? format(acceptedDate, "yyyy-MM-dd HH:mm")
+        : `${new Date().toISOString().slice(0, 10)} ${order.time}`;
 
   const completedAtRaw = getCompletedAt(order);
   const completedAt = completedAtRaw
@@ -92,7 +96,7 @@ export function mapOrderToStatisticsRow(
     : FALLBACK;
 
   const cookingTime =
-    completedAtRaw && !isNaN(ts) && ts > 0
+    completedAtRaw && (order.createdAt || (!isNaN(ts) && ts > 0))
       ? `${Math.round((new Date(completedAtRaw).getTime() - acceptedDate.getTime()) / 60000)} min`
       : FALLBACK;
 

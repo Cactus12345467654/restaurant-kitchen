@@ -17,6 +17,8 @@ export interface SharedOrder {
   pagerCalled?: boolean;
   /** Cart total in cents when sent to kitchen. */
   totalPriceCents?: number | null;
+  /** ISO timestamp when order was created (for statistics). */
+  createdAt?: string | null;
   /** ISO timestamp when order was marked ready (GATAVS) or delivered (ATDOTS_KLIENTAM). */
   completedAt?: string | null;
 }
@@ -30,6 +32,7 @@ function mapApiOrder(o: Record<string, unknown>): SharedOrder {
     pagerNumber: typeof o.pagerNumber === "number" ? o.pagerNumber : null,
     pagerCalled: o.pagerCalled === true,
     totalPriceCents: typeof o.totalPriceCents === "number" ? o.totalPriceCents : null,
+    createdAt: typeof o.createdAt === "string" ? o.createdAt : null,
     completedAt: typeof o.completedAt === "string" ? o.completedAt : null,
   };
 }
@@ -103,6 +106,16 @@ export function getUsedPagerNumbers(ordersList: SharedOrder[]): number[] {
 
 export function getOrdersByStatus(ordersList: SharedOrder[], ...statuses: OrderStatus[]): SharedOrder[] {
   return ordersList.filter((o) => statuses.includes(o.status));
+}
+
+/** Order creation timestamp in ms (for statistics). Uses createdAt when available, else falls back to legacy id. */
+export function getOrderTimestamp(order: SharedOrder): number {
+  if (order.createdAt && typeof order.createdAt === "string") {
+    const ts = new Date(order.createdAt).getTime();
+    if (!isNaN(ts)) return ts;
+  }
+  const n = Number(order.id);
+  return isNaN(n) ? 0 : n;
 }
 
 /** All orders (for statistics view). */
@@ -179,6 +192,7 @@ export function useOrders(locationId: number | null, ...statuses: OrderStatus[])
 
 /**
  * Live hook for all orders (statistics). Polls the API.
+ * Returns { orders, error } - error is set when fetch fails (e.g. 401).
  */
 export function useAllOrders(locationId?: number | null): SharedOrder[] {
   const [orders, setOrders] = useState<SharedOrder[]>([]);
