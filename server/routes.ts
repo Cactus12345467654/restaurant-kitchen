@@ -463,6 +463,71 @@ export async function registerRoutes(
     }
   });
 
+  // Orders (waiter → kitchen sync across devices)
+  app.post("/api/locations/:locationId/orders", requireAuth, requireRole(["super_admin", "location_admin", "manager", "waiter"]), async (req, res) => {
+    try {
+      const locationId = Number(req.params.locationId);
+      if (!Number.isFinite(locationId)) {
+        return res.status(400).json({ message: "Invalid location ID" });
+      }
+      const { items, pagerNumber, totalPriceCents } = req.body as { items?: string[]; pagerNumber?: number | null; totalPriceCents?: number | null };
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "items array required" });
+      }
+      const order = await storage.createOrder({ locationId, items, pagerNumber, totalPriceCents });
+      return res.status(201).json(order);
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message || "Failed to create order" });
+    }
+  });
+
+  app.get("/api/locations/:locationId/orders", requireAuth, async (req, res) => {
+    try {
+      const locationId = Number(req.params.locationId);
+      if (!Number.isFinite(locationId)) {
+        return res.status(400).json({ message: "Invalid location ID" });
+      }
+      const statusParam = req.query.status as string | undefined;
+      const statuses = statusParam ? statusParam.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+      const ordersList = await storage.getOrdersByLocation(locationId, statuses);
+      return res.json(ordersList);
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message || "Failed to fetch orders" });
+    }
+  });
+
+  app.patch("/api/orders/:id", requireAuth, requireRole(["super_admin", "location_admin", "manager", "kitchen_staff", "waiter"]), async (req, res) => {
+    try {
+      const orderId = Number(req.params.id);
+      if (!Number.isFinite(orderId)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+      const { status, pagerCalled } = req.body as { status?: string; pagerCalled?: boolean };
+      if (status != null) {
+        await storage.updateOrderStatus(orderId, status);
+      }
+      if (pagerCalled !== undefined) {
+        await storage.updateOrderPagerCalled(orderId, pagerCalled);
+      }
+      return res.status(200).json({ ok: true });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message || "Failed to update order" });
+    }
+  });
+
+  app.get("/api/orders", requireAuth, requireRole(["super_admin", "location_admin", "manager"]), async (req, res) => {
+    try {
+      const locationIdParam = req.query.locationId;
+      const locationId = locationIdParam != null ? Number(locationIdParam) : null;
+      const user = req.user as { locationId?: number } | undefined;
+      const effectiveLocationId = locationId ?? (user?.locationId ?? null);
+      const ordersList = await storage.getAllOrders(Number.isFinite(effectiveLocationId) ? effectiveLocationId : undefined);
+      return res.json(ordersList);
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message || "Failed to fetch orders" });
+    }
+  });
+
   app.delete(api.menuItems.delete.path, requireAuth, requireRole(['super_admin', 'location_admin', 'manager']), async (req, res) => {
     await storage.deleteMenuItem(Number(req.params.id));
     res.sendStatus(204);

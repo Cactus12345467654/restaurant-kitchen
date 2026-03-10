@@ -48,9 +48,9 @@ function filterOrders(
 
 const PAGE_SIZES = [25, 50, 100] as const;
 
-export function OrdersStatisticsPage() {
+export function OrdersStatisticsPage({ locationId }: { locationId?: number | null }) {
   const { t } = useTranslation();
-  const orders = useAllOrders();
+  const orders = useAllOrders(locationId);
   const { filters, setFilters, clearFilters } = useOrdersFiltersState();
   const [appliedFilters, setAppliedFilters] = useState<FiltersState>(() => filters);
   const [page, setPage] = useState(1);

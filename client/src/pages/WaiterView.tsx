@@ -250,7 +250,8 @@ export default function WaiterView() {
   const { t } = useTranslation();
   const params = new URLSearchParams(window.location.search);
   const paramLocationId = Number(params.get("locationId")) || null;
-  const locationId = paramLocationId ?? user?.locationId ?? null;
+  const userLocationId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
+  const locationId = paramLocationId ?? userLocationId ?? null;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<{
     id: number;
@@ -263,14 +264,17 @@ export default function WaiterView() {
   const [pagerMode, setPagerMode] = usePagerMode();
   const [selectedPager, setSelectedPager] = useState<number | null>(null);
 
-  const gatavojasOrders = useOrders(ORDER_STATUS.GATAVOJAS);
-  const gatavsOrders = useOrders(ORDER_STATUS.GATAVS);
+  const gatavojasOrders = useOrders(locationId, ORDER_STATUS.GATAVOJAS);
+  const gatavsOrders = useOrders(locationId, ORDER_STATUS.GATAVS);
   const waiterPreparingOrders = [...gatavojasOrders, ...gatavsOrders].sort(
     (a, b) => Number(a.id) - Number(b.id),
   );
   const orderTotal = orderLines.reduce((s, l) => s + l.totalPrice, 0);
 
-  const usedPagers = useMemo(() => new Set(getUsedPagerNumbers()), [gatavojasOrders, gatavsOrders]);
+  const usedPagers = useMemo(
+    () => new Set(getUsedPagerNumbers([...gatavojasOrders, ...gatavsOrders])),
+    [gatavojasOrders, gatavsOrders],
+  );
 
   const markAsGatavs = (order: SharedOrder) => {
     const pagerNum = order.pagerNumber ?? null;
@@ -284,17 +288,21 @@ export default function WaiterView() {
     updateOrderStatus(orderId, ORDER_STATUS.ATDOTS_KLIENTAM);
   };
 
-  const sendToKitchen = () => {
-    if (orderLines.length === 0) return;
+  const sendToKitchen = async () => {
+    if (orderLines.length === 0 || !locationId) return;
     const items = orderLines.map((l) => {
       const modStr = l.modifiers.map((m) => m.optionName).join(", ");
       return modStr ? `${l.itemName} (${modStr})` : l.itemName;
     });
     const pagerNum = pagerMode ? selectedPager : null;
-    addOrder(items, pagerNum, orderTotal);
-    setOrderLines([]);
-    setShowConfirm(false);
-    setSelectedPager(null);
+    try {
+      await addOrder(locationId, items, pagerNum, orderTotal);
+      setOrderLines([]);
+      setShowConfirm(false);
+      setSelectedPager(null);
+    } catch (err) {
+      console.error("Failed to send order:", err);
+    }
   };
 
   const handleAddToOrder = (line: OrderLine) => {
@@ -333,10 +341,12 @@ export default function WaiterView() {
     setOrderLines((prev) => prev.filter((l) => l.uid !== uid));
   };
 
-  const { data: menuItems, isLoading } = useMenuItems(locationId);
+  const { data: menuItems, isLoading, isError, refetch } = useMenuItems(locationId);
 
   const activeByCategory = useMemo(() => {
-    const items = (menuItems ?? []).filter((i: any) => i.isAvailable !== false);
+    const items = (menuItems ?? []).filter(
+      (i: any) => (i.isAvailable ?? i.is_available) !== false,
+    );
     const map = new Map<string, any[]>();
     items.forEach((item: any) => {
       const cat = item.category?.trim() || "Uncategorized";
@@ -365,6 +375,21 @@ export default function WaiterView() {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center gap-4">
+        <UtensilsCrossed className="h-12 w-12 text-muted-foreground" />
+        <p className="text-muted-foreground text-lg text-center">{t("waiter.loadError")}</p>
+        <button
+          onClick={() => refetch()}
+          className="rounded-lg border border-primary bg-primary/15 text-primary px-4 py-2 text-sm font-medium hover:bg-primary/25 transition-colors"
+        >
+          {t("waiter.retry")}
+        </button>
       </div>
     );
   }
@@ -441,11 +466,16 @@ export default function WaiterView() {
                   onClick={() => handleProductClick({ id: item.id, name: item.name, price: item.price })}
                   className="rounded-lg border border-border/50 bg-white/5 hover:bg-white/10 transition-colors overflow-hidden flex flex-col text-left [touch-action:manipulation]"
                 >
-                  {item.imageUrl ? (
+                  {(item.imageUrl ?? item.image_url) ? (
                     <img
-                      src={item.imageUrl}
+                      src={(() => {
+                        const url = item.imageUrl ?? item.image_url;
+                        return url?.startsWith("/") ? window.location.origin + url : url;
+                      })()}
                       alt={item.name}
                       className="w-full h-32 object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="w-full h-32 bg-white/10 flex items-center justify-center">

@@ -258,6 +258,8 @@ export const en: Record<TranslationKey, string> = {
   "waiter.title": "Waiter Workspace",
   "waiter.noLocation": "No location specified.",
   "waiter.noItems": "No items available.",
+  "waiter.loadError": "Could not load menu. Check your connection or log in again.",
+  "waiter.retry": "Retry",
   "waiter.categories": "Categories",
   "waiter.item": "item",
   "waiter.items": "items",

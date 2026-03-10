@@ -7,6 +7,7 @@ import {
   modifierGroups,
   modifierOptions,
   menuItemModifierGroups,
+  orders,
   type User,
   type InsertUser,
   type Location,
@@ -70,6 +71,13 @@ export interface IStorage {
     updates: UpdateModifierOptionRequest,
   ): Promise<ModifierOption>;
   deleteModifierOption(id: number): Promise<void>;
+
+  // Orders
+  createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null }): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; completedAt: string | null }>;
+  getOrdersByLocation(locationId: number, statuses?: string[]): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; completedAt: string | null }[]>;
+  getAllOrders(locationId?: number | null): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; completedAt: string | null }[]>;
+  updateOrderStatus(orderId: number, status: string): Promise<void>;
+  updateOrderPagerCalled(orderId: number, pagerCalled: boolean): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -159,8 +167,77 @@ export class DatabaseStorage implements IStorage {
       await db.delete(menuItemModifierGroups).where(eq(menuItemModifierGroups.menuItemId, item.id));
     }
     await db.delete(menuItems).where(eq(menuItems.locationId, locationId));
+    await db.delete(orders).where(eq(orders.locationId, locationId));
     await db.update(users).set({ locationId: null }).where(eq(users.locationId, locationId));
     await db.delete(locations).where(eq(locations.id, locationId));
+  }
+
+  // Orders
+  async createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null }) {
+    const [row] = await db.insert(orders).values({
+      locationId: data.locationId,
+      items: data.items,
+      pagerNumber: data.pagerNumber ?? null,
+      totalPriceCents: data.totalPriceCents ?? null,
+      status: "gatavojas",
+    }).returning();
+    const d = new Date(row.createdAt ?? new Date());
+    const time = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+    return {
+      id: String(row.id),
+      time,
+      status: row.status,
+      items: row.items,
+      pagerNumber: row.pagerNumber,
+      pagerCalled: row.pagerCalled ?? false,
+      totalPriceCents: row.totalPriceCents,
+      completedAt: row.completedAt?.toISOString() ?? null,
+    };
+  }
+
+  async getOrdersByLocation(locationId: number, statuses?: string[]) {
+    const rows = await db.select().from(orders).where(eq(orders.locationId, locationId));
+    const filtered = statuses?.length
+      ? rows.filter((r) => statuses.includes(r.status))
+      : rows;
+    return filtered.map((r) => ({
+      id: String(r.id),
+      time: r.createdAt ? `${new Date(r.createdAt).getHours().toString().padStart(2, "0")}:${new Date(r.createdAt).getMinutes().toString().padStart(2, "0")}` : "00:00",
+      status: r.status,
+      items: r.items,
+      pagerNumber: r.pagerNumber,
+      pagerCalled: r.pagerCalled ?? false,
+      totalPriceCents: r.totalPriceCents,
+      completedAt: r.completedAt?.toISOString() ?? null,
+    }));
+  }
+
+  async getAllOrders(locationId?: number | null) {
+    const rows = locationId != null
+      ? await db.select().from(orders).where(eq(orders.locationId, locationId))
+      : await db.select().from(orders);
+    return rows.map((r) => ({
+      id: String(r.id),
+      time: r.createdAt ? `${new Date(r.createdAt).getHours().toString().padStart(2, "0")}:${new Date(r.createdAt).getMinutes().toString().padStart(2, "0")}` : "00:00",
+      status: r.status,
+      items: r.items,
+      pagerNumber: r.pagerNumber,
+      pagerCalled: r.pagerCalled ?? false,
+      totalPriceCents: r.totalPriceCents,
+      completedAt: r.completedAt?.toISOString() ?? null,
+    }));
+  }
+
+  async updateOrderStatus(orderId: number, status: string) {
+    const updates: Record<string, unknown> = { status };
+    if (status === "gatavs" || status === "atdots_klientam") {
+      updates.completedAt = new Date();
+    }
+    await db.update(orders).set(updates as any).where(eq(orders.id, orderId));
+  }
+
+  async updateOrderPagerCalled(orderId: number, pagerCalled: boolean) {
+    await db.update(orders).set({ pagerCalled }).where(eq(orders.id, orderId));
   }
 
   // Menu Items

@@ -16,7 +16,7 @@ export function ProductMonthlyTableReport({
   initialLocationId?: number | null;
 }) {
   const { t } = useTranslation();
-  const orders = useAllOrders();
+  const orders = useAllOrders(initialLocationId ?? undefined);
   const defaultFilters = useMemo(
     () => getDefaultTableReportFilters(initialLocationId),
     [initialLocationId]

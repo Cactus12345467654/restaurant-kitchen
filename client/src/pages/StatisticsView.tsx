@@ -114,7 +114,7 @@ export default function StatisticsView() {
 
             <div className="mt-6">
               <TabsContent value="orders">
-                <OrdersStatisticsPage />
+                <OrdersStatisticsPage locationId={locationId} />
               </TabsContent>
               <TabsContent value="products">
                 <StatsProductsTab />
@@ -126,7 +126,7 @@ export default function StatisticsView() {
                 <ProductMonthlyTableReport initialLocationId={locationId} />
               </TabsContent>
               <TabsContent value="chart">
-                <ChartReportPage />
+                <ChartReportPage locationId={locationId} />
               </TabsContent>
             </div>
           </Tabs>

@@ -72,6 +72,18 @@ export const modifierOptions = pgTable("modifier_options", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").notNull().references(() => locations.id),
+  status: text("status").notNull().default("gatavojas"),
+  items: jsonb("items").$type<string[]>().notNull(),
+  pagerNumber: integer("pager_number"),
+  pagerCalled: boolean("pager_called").default(false),
+  totalPriceCents: integer("total_price_cents"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // Which modifier groups are attached to which menu items (shared groups: one group, many items)
 export const menuItemModifierGroups = pgTable(
   "menu_item_modifier_groups",

@@ -17,6 +17,7 @@ export function useMenuItems(locationId: number | null) {
       return res.json();
     },
     enabled: !!locationId,
+    retry: 2,
   });
 }
 

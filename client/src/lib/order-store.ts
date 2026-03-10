@@ -3,7 +3,6 @@ import { ORDER_STATUS, normalizeStatus, type OrderStatus } from "./order-status"
 
 const ALL_STATUSES = Object.values(ORDER_STATUS) as OrderStatus[];
 
-const STORAGE_KEY = "mock_orders";
 const POLL_MS_VISIBLE = 2000;
 const POLL_MS_HIDDEN = 10000;
 
@@ -14,7 +13,7 @@ export interface SharedOrder {
   items: string[];
   /** Pager 1–16 when assigned; null when none. */
   pagerNumber?: number | null;
-  /** True after waiter pressed "Gatavs" and pager signal was sent. */
+  /** True after waiter pressed "Gatavs" and pager signal sent. */
   pagerCalled?: boolean;
   /** Cart total in cents when sent to kitchen. */
   totalPriceCents?: number | null;
@@ -22,71 +21,49 @@ export interface SharedOrder {
   completedAt?: string | null;
 }
 
-let orderSeq = Date.now();
-
-function nextId(): string {
-  return String(++orderSeq);
+function mapApiOrder(o: Record<string, unknown>): SharedOrder {
+  return {
+    id: String(o.id),
+    time: typeof o.time === "string" ? o.time : "00:00",
+    status: normalizeStatus(String(o.status ?? "gatavojas")),
+    items: Array.isArray(o.items) ? o.items : [],
+    pagerNumber: typeof o.pagerNumber === "number" ? o.pagerNumber : null,
+    pagerCalled: o.pagerCalled === true,
+    totalPriceCents: typeof o.totalPriceCents === "number" ? o.totalPriceCents : null,
+    completedAt: typeof o.completedAt === "string" ? o.completedAt : null,
+  };
 }
 
-function now(): string {
-  const d = new Date();
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-}
-
-function readOrders(): SharedOrder[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const orders = raw ? JSON.parse(raw) : [];
-    return orders.map((o: SharedOrder) => ({
-      ...o,
-      status: normalizeStatus(o.status),
-    }));
-  } catch {
-    return [];
-  }
-}
-
-const ORDERS_UPDATED_EVENT = "orders-updated";
-
-function writeOrders(orders: SharedOrder[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-  window.dispatchEvent(new CustomEvent(ORDERS_UPDATED_EVENT));
-}
-
-export function addOrder(
+export async function addOrder(
+  locationId: number,
   items: string[],
   pagerNumber?: number | null,
   totalPriceCents?: number | null
-): SharedOrder {
-  const order: SharedOrder = {
-    id: nextId(),
-    time: now(),
-    status: ORDER_STATUS.GATAVOJAS,
-    items,
-    pagerNumber: pagerNumber ?? null,
-    pagerCalled: false,
-    totalPriceCents: totalPriceCents ?? null,
-    completedAt: null,
-  };
-  const orders = readOrders();
-  orders.push(order);
-  writeOrders(orders);
-  return order;
+): Promise<SharedOrder> {
+  const res = await fetch(`/api/locations/${locationId}/orders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items, pagerNumber: pagerNumber ?? null, totalPriceCents: totalPriceCents ?? null }),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.message || "Failed to create order");
+  }
+  const data = await res.json();
+  return mapApiOrder(data);
 }
 
-export function updateOrderStatus(orderId: string, newStatus: OrderStatus): void {
-  const orders = readOrders();
-  const idx = orders.findIndex((o) => o.id === orderId);
-  if (idx !== -1) {
-    const o = orders[idx];
-    o.status = newStatus;
-    if (
-      !o.completedAt &&
-      (newStatus === ORDER_STATUS.GATAVS || newStatus === ORDER_STATUS.ATDOTS_KLIENTAM)
-    ) {
-      o.completedAt = new Date().toISOString();
-    }
-    writeOrders(orders);
+export async function updateOrderStatus(orderId: string, newStatus: OrderStatus): Promise<void> {
+  const res = await fetch(`/api/orders/${orderId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: newStatus }),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.message || "Failed to update order");
   }
 }
 
@@ -99,89 +76,140 @@ export function notifyNumberDisplay(orderId: string, pagerNumber?: number | null
   );
 }
 
-/** Update pagerCalled flag on an order. */
-export function updateOrderPagerCalled(orderId: string, pagerCalled: boolean): void {
-  const orders = readOrders();
-  const idx = orders.findIndex((o) => o.id === orderId);
-  if (idx !== -1) {
-    orders[idx].pagerCalled = pagerCalled;
-    writeOrders(orders);
+export async function updateOrderPagerCalled(orderId: string, pagerCalled: boolean): Promise<void> {
+  const res = await fetch(`/api/orders/${orderId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pagerCalled }),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.message || "Failed to update order");
   }
 }
 
 /** Pager numbers 1–16 currently assigned to active (non-archived) orders. */
-export function getUsedPagerNumbers(): number[] {
-  const orders = readOrders();
-  const active = orders.filter(
+export function getUsedPagerNumbers(ordersList: SharedOrder[]): number[] {
+  const active = ordersList.filter(
     (o) =>
       o.status !== ORDER_STATUS.ATDOTS_KLIENTAM &&
       o.pagerNumber != null &&
       o.pagerNumber >= 1 &&
       o.pagerNumber <= 16,
   );
-  return [...new Set(active.map((o) => o.pagerNumber!))];
+  return Array.from(new Set(active.map((o) => o.pagerNumber!)));
 }
 
-export function getOrdersByStatus(...statuses: OrderStatus[]): SharedOrder[] {
-  return readOrders().filter((o) => statuses.includes(o.status));
+export function getOrdersByStatus(ordersList: SharedOrder[], ...statuses: OrderStatus[]): SharedOrder[] {
+  return ordersList.filter((o) => statuses.includes(o.status));
 }
 
 /** All orders (for statistics view). */
-export function getAllOrders(): SharedOrder[] {
-  return readOrders();
+export function getAllOrders(ordersList: SharedOrder[]): SharedOrder[] {
+  return ordersList;
+}
+
+async function fetchOrdersByLocation(locationId: number, statuses: string[]): Promise<SharedOrder[]> {
+  const statusParam = statuses.join(",");
+  const res = await fetch(`/api/locations/${locationId}/orders?status=${encodeURIComponent(statusParam)}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch orders");
+  const data = await res.json();
+  return Array.isArray(data) ? data.map(mapApiOrder) : [];
+}
+
+async function fetchAllOrders(locationId?: number | null): Promise<SharedOrder[]> {
+  const url = locationId != null ? `/api/orders?locationId=${locationId}` : "/api/orders";
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch orders");
+  const data = await res.json();
+  return Array.isArray(data) ? data.map(mapApiOrder) : [];
 }
 
 /**
- * React hook that returns live orders filtered by the given statuses.
- * Syncs across browser tabs via the `storage` event and a short poll
- * for same-tab writes.
+ * React hook that returns live orders for a location, filtered by statuses.
+ * Polls the API so kitchen and waiter stay in sync across devices.
  */
-export function useOrders(...statuses: OrderStatus[]): SharedOrder[] {
+export function useOrders(locationId: number | null, ...statuses: OrderStatus[]): SharedOrder[] {
   const filter = useCallback(
-    () => readOrders().filter((o) => statuses.includes(o.status)),
-    // statuses are constants passed at call-site, stable across renders
+    (list: SharedOrder[]) => list.filter((o) => statuses.includes(o.status)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [statuses.join(",")],
   );
 
-  const [orders, setOrders] = useState<SharedOrder[]>(filter);
+  const [orders, setOrders] = useState<SharedOrder[]>([]);
 
   useEffect(() => {
-    const refresh = () => setOrders(filter());
+    if (!locationId) {
+      setOrders([]);
+      return;
+    }
 
-    // Cross-tab sync
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) refresh();
+    const load = async () => {
+      try {
+        const list = await fetchOrdersByLocation(locationId, statuses);
+        setOrders(filter(list));
+      } catch {
+        setOrders([]);
+      }
     };
-    window.addEventListener("storage", onStorage);
 
-    // Same-tab sync (when this tab writes)
-    const onOrdersUpdated = () => refresh();
-    window.addEventListener(ORDERS_UPDATED_EVENT, onOrdersUpdated);
+    load();
 
-    // Visibility-aware: immediate refresh + reschedule poll when tab becomes visible
     const getPollMs = () =>
       document.visibilityState === "visible" ? POLL_MS_VISIBLE : POLL_MS_HIDDEN;
-    let intervalId = setInterval(refresh, getPollMs());
+    let intervalId = setInterval(load, getPollMs());
     const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") refresh();
+      load();
       clearInterval(intervalId);
-      intervalId = setInterval(refresh, getPollMs());
+      intervalId = setInterval(load, getPollMs());
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener(ORDERS_UPDATED_EVENT, onOrdersUpdated);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       clearInterval(intervalId);
     };
-  }, [filter]);
+  }, [locationId, statuses.join(","), filter]);
 
   return orders;
 }
 
-/** Live hook for all orders (statistics). */
-export function useAllOrders(): SharedOrder[] {
-  return useOrders(...ALL_STATUSES);
+/**
+ * Live hook for all orders (statistics). Polls the API.
+ */
+export function useAllOrders(locationId?: number | null): SharedOrder[] {
+  const [orders, setOrders] = useState<SharedOrder[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const list = await fetchAllOrders(locationId ?? undefined);
+        setOrders(list);
+      } catch {
+        setOrders([]);
+      }
+    };
+
+    load();
+
+    const getPollMs = () =>
+      document.visibilityState === "visible" ? POLL_MS_VISIBLE : POLL_MS_HIDDEN;
+    let intervalId = setInterval(load, getPollMs());
+    const onVisibilityChange = () => {
+      load();
+      clearInterval(intervalId);
+      intervalId = setInterval(load, getPollMs());
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [locationId ?? "all"]);
+
+  return orders;
 }

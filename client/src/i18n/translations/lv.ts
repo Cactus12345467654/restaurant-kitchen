@@ -256,6 +256,8 @@ export const lv = {
   "waiter.title": "Viesmīļa darba logs",
   "waiter.noLocation": "Lokācija nav norādīta.",
   "waiter.noItems": "Nav pieejamu ēdienu.",
+  "waiter.loadError": "Nevar ielādēt ēdienkarti. Pārbaudiet savienojumu vai pieteikšanos.",
+  "waiter.retry": "Mēģināt vēlreiz",
   "waiter.categories": "Kategorijas",
   "waiter.item": "pozīcija",
   "waiter.items": "pozīcijas",

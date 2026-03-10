@@ -14,7 +14,12 @@ export default function KitchenView() {
   const { t } = useTranslation();
   const { data: locations } = useLocations();
 
-  const kitchenOrders = useOrders(ORDER_STATUS.GATAVOJAS);
+  const params = new URLSearchParams(window.location.search);
+  const paramLocationId = Number(params.get("locationId")) || null;
+  const userLocationId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
+  const locationId = paramLocationId ?? userLocationId ?? null;
+
+  const kitchenOrders = useOrders(locationId, ORDER_STATUS.GATAVOJAS);
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
   const isInitialMountRef = useRef(true);
 
@@ -53,9 +58,6 @@ export default function KitchenView() {
   const leftColumnOrders = sortedOrders.filter((o) => map[o.id] === "left");
   const rightColumnOrders = sortedOrders.filter((o) => map[o.id] === "right");
 
-  const params = new URLSearchParams(window.location.search);
-  const paramLocationId = Number(params.get("locationId")) || null;
-  const locationId = paramLocationId ?? user?.locationId ?? null;
   const locationName = locations?.find((l) => l.id === locationId)?.name;
 
   if (!locationId) {

@@ -74,9 +74,9 @@ const chartConfig = {
   },
 };
 
-export function ChartReportPage() {
+export function ChartReportPage({ locationId }: { locationId?: number | null }) {
   const { t } = useTranslation();
-  const orders = useAllOrders();
+  const orders = useAllOrders(locationId);
 
   const { dailyData, weeklyData, todayRevenue, weeklyRevenue } = useMemo(() => {
     const now = new Date();
