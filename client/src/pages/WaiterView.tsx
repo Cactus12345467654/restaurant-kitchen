@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMenuItems, useMenuItemModifiers } from "@/hooks/use-menu";
 import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Radio } from "lucide-react";
@@ -264,6 +264,10 @@ export default function WaiterView() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("order");
   const [pagerMode, setPagerMode] = usePagerMode();
   const [selectedPager, setSelectedPager] = useState<number | null>(null);
+  const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
+  const handleImgError = useCallback((id: number) => {
+    setBrokenImages((prev) => { const next = new Set(prev); next.add(id); return next; });
+  }, []);
 
   const gatavojasOrders = useOrders(locationId, ORDER_STATUS.GATAVOJAS);
   const gatavsOrders = useOrders(locationId, ORDER_STATUS.GATAVS);
@@ -467,13 +471,14 @@ export default function WaiterView() {
                   onClick={() => handleProductClick({ id: item.id, name: item.name, price: item.price })}
                   className="rounded-lg border border-border/50 bg-white/5 hover:bg-white/10 transition-colors overflow-hidden flex flex-col text-left [touch-action:manipulation]"
                 >
-                  {resolveImageUrl(item) ? (
+                  {resolveImageUrl(item) && !brokenImages.has(item.id) ? (
                     <img
                       src={resolveImageUrl(item)!}
                       alt={item.name}
                       className="w-full h-32 object-cover"
                       loading="lazy"
                       decoding="async"
+                      onError={() => handleImgError(item.id)}
                     />
                   ) : (
                     <div className="w-full h-32 bg-white/10 flex items-center justify-center">

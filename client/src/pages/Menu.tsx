@@ -985,6 +985,10 @@ export default function Menu() {
   const [isModifiersModalOpen, setIsModifiersModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
+  const handleImgError = useCallback((id: number) => {
+    setBrokenImages((prev) => { const next = new Set(prev); next.add(id); return next; });
+  }, []);
 
   const { data: modifierGroups, isLoading: isLoadingModifiers, refetch: refetchModifiers } =
     useMenuItemModifiers(isDialogOpen ? editingId : null);
@@ -1576,11 +1580,12 @@ export default function Menu() {
                                   >
                                     <GripVertical className="h-4 w-4" />
                                   </span>
-                                  {resolveImageUrl(item) ? (
+                                  {resolveImageUrl(item) && !brokenImages.has(item.id) ? (
                                     <img
                                       src={resolveImageUrl(item)!}
                                       alt=""
                                       className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-md border border-border/50 bg-black/20 shrink-0"
+                                      onError={() => handleImgError(item.id)}
                                     />
                                   ) : (
                                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-md border border-border/50 bg-white/5 shrink-0 flex items-center justify-center">
@@ -1686,10 +1691,10 @@ export default function Menu() {
               <div className="space-y-2">
                 <Label>{t("menu.itemImage")}</Label>
                 <div className="flex flex-col gap-3">
-                  {resolveImageUrl(formData) ? (
+                  {formData.imageUrl ? (
                     <div className="flex items-start gap-3">
                       <img
-                        src={resolveImageUrl(formData)!}
+                        src={formData.imageUrl}
                         alt="Item"
                         className="w-24 h-24 object-cover rounded-lg border border-border/50 bg-black/20"
                       />

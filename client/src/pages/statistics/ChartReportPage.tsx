@@ -56,6 +56,13 @@ const WEEKDAY_LABELS: Record<number, string> = {
   6: "S",
 };
 
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 const chartConfig = {
   gatavojas: {
     label: "Gatavojas",
@@ -97,7 +104,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
       const dte = new Date(weekStart);
       dte.setDate(dte.getDate() + d);
       weeklyArr.push({
-        day: dte.toISOString().slice(0, 10),
+        day: toLocalDateStr(dte),
         label: WEEKDAY_LABELS[dte.getDay()] ?? "",
         gatavojas: 0,
         pabeigti: 0,
@@ -140,7 +147,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
       }
 
       if (ts >= weekStartTs) {
-        const dayStr = created.toISOString().slice(0, 10);
+        const dayStr = toLocalDateStr(created);
         const idx = dayToIndex.get(dayStr);
         if (idx != null) {
           const entry = weeklyArr[idx];

@@ -6,18 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Resolves a menu item image URL to an absolute URL ready for <img src>.
- * Accepts any object that may have `imageUrl` or `image_url` (covers both
- * camelCase API responses and possible snake_case variants).
+ * Resolves a menu-item image field to a URL usable in <img src>.
+ * Handles both camelCase (`imageUrl`) and snake_case (`image_url`) API shapes.
  * Returns `null` when no image is available.
  */
 export function resolveImageUrl(
   item: { imageUrl?: string | null; image_url?: string | null } | null | undefined,
 ): string | null {
   if (!item) return null;
-  const raw = item.imageUrl ?? item.image_url;
-  if (!raw) return null;
-  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-  if (raw.startsWith("/")) return window.location.origin + raw;
+  const raw = (item as any).imageUrl ?? (item as any).image_url;
+  if (!raw || typeof raw !== "string") return null;
   return raw;
 }
