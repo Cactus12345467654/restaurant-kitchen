@@ -305,6 +305,7 @@ export const lv = {
   "auth.checkEmail": "Pārbaudiet e-pastu",
   "auth.resetLinkSent": "Ja konts pastāv ar šo adresi, mēs nosūtījām atjaunošanas saiti.",
   "auth.requestFailed": "Pieprasījums neizdevās",
+  "auth.networkError": "Nav savienojuma ar serveri. Pārbaudiet interneta savienojumu un mēģiniet vēlreiz.",
   "auth.sendingLink": "Sūta saiti...",
   "auth.sendResetLink": "Nosūtīt atjaunošanas saiti",
   "auth.backToLogin": "Atpakaļ uz pieteikšanos",

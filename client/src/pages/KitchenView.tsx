@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { useTranslation } from "@/i18n";
@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Badge } from "@/components/ui/badge";
 import { ORDER_STATUS } from "@/lib/order-status";
 import { useOrders, updateOrderStatus } from "@/lib/order-store";
+import { playNotificationBeep } from "@/lib/play-notification-sound";
 
 export default function KitchenView() {
   const { user } = useAuth();
@@ -14,6 +15,23 @@ export default function KitchenView() {
   const { data: locations } = useLocations();
 
   const kitchenOrders = useOrders(ORDER_STATUS.GATAVOJAS);
+  const prevOrderIdsRef = useRef<Set<string>>(new Set());
+  const isInitialMountRef = useRef(true);
+
+  useEffect(() => {
+    const currentIds = new Set(kitchenOrders.map((o) => o.id));
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      prevOrderIdsRef.current = currentIds;
+      return;
+    }
+    const prevIds = prevOrderIdsRef.current;
+    const hasNewOrders = [...currentIds].some((id) => !prevIds.has(id));
+    if (hasNewOrders) {
+      playNotificationBeep();
+    }
+    prevOrderIdsRef.current = currentIds;
+  }, [kitchenOrders]);
 
   const columnMapRef = useRef<Record<string, "left" | "right">>({});
   const sortedOrders = [...kitchenOrders].sort((a, b) => Number(a.id) - Number(b.id));

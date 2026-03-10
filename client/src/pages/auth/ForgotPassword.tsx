@@ -24,10 +24,11 @@ export default function ForgotPassword() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username }),
+        credentials: "include",
       });
 
       if (!res.ok) {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({}));
         throw new Error(error.message || t("auth.requestFailed"));
       }
 
@@ -36,9 +37,10 @@ export default function ForgotPassword() {
         description: t("auth.resetLinkSent"),
       });
     } catch (err: any) {
+      const isNetworkError = err?.message === "Failed to fetch" || err?.name === "TypeError";
       toast({
         title: t("auth.requestFailed"),
-        description: err.message,
+        description: isNetworkError ? t("auth.networkError") : err.message,
         variant: "destructive",
       });
     } finally {

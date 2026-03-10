@@ -163,9 +163,14 @@ export async function registerRoutes(
         await storage.updateUser(user.id, {
           passwordResetToken: token,
           passwordResetExpires: expires,
-        });
+        } as any);
 
-        await sendPasswordResetEmail(user.username, token);
+        try {
+          await sendPasswordResetEmail(user.username, token);
+        } catch (emailErr: any) {
+          console.error("[forgot-password] Email send failed:", emailErr?.message);
+          // Still return success - token was saved; user can request again if email failed
+        }
       }
       
       // Always return success to prevent user enumeration
@@ -174,6 +179,7 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
+      console.error("[forgot-password] Error:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });

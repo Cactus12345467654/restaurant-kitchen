@@ -307,6 +307,7 @@ export const en: Record<TranslationKey, string> = {
   "auth.checkEmail": "Check your email",
   "auth.resetLinkSent": "If an account exists for that address, we've sent a reset link.",
   "auth.requestFailed": "Request failed",
+  "auth.networkError": "Cannot connect to server. Check your internet connection and try again.",
   "auth.sendingLink": "Sending link...",
   "auth.sendResetLink": "Send reset link",
   "auth.backToLogin": "Back to login",
