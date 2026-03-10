@@ -1,11 +1,35 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import type { Server } from "http";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import passport from "passport";
 import { setupAuth, hashPassword } from "./auth";
 import crypto from "crypto";
+import { sendPasswordResetEmail } from "./email";
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+try {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+} catch (_) {}
+
+const MAX_UPLOAD_MB = 5;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".jpg";
+      const name = crypto.randomBytes(16).toString("hex") + ext;
+      cb(null, name);
+    },
+  }),
+  limits: { fileSize: MAX_UPLOAD_BYTES },
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -14,6 +38,9 @@ export async function registerRoutes(
   // Set up authentication first
   setupAuth(app);
 
+  // Serve uploaded files (public URLs)
+  app.use("/uploads", express.static(uploadsDir));
+
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -21,13 +48,51 @@ export async function registerRoutes(
     next();
   };
 
-  const requireRole = (roles: string[]) => (req: Request, res: Response, next: NextFunction) => {
+  const requireRole = (allowedRoles: string[]) => (req: Request, res: Response, next: NextFunction) => {
     const user = req.user as any;
-    if (!user || !roles.includes(user.role)) {
+    const userRoles = Array.isArray(user?.roles) ? user.roles : (user?.role ? [user.role] : []);
+    if (!user || !allowedRoles.some((r) => userRoles.includes(r))) {
       return res.status(403).json({ message: "Forbidden" });
     }
     next();
   };
+
+  // Upload route on dedicated router so it is matched before any catch-all (e.g. Vite)
+  const uploadRouter = express.Router();
+  uploadRouter.post(
+    "/",
+    requireAuth,
+    requireRole(["super_admin", "location_admin", "manager"]),
+    (req: Request, res: Response, next: NextFunction) => {
+      upload.single("file")(req, res, (err: any) => {
+        if (err) {
+          res.setHeader("Content-Type", "application/json");
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(413).json({
+              message: `Fails ir pārāk liels. Maksimāli atļauts: ${MAX_UPLOAD_MB} MB.`,
+            });
+          }
+          return res.status(500).json({ message: err.message || "Upload failed" });
+        }
+        next();
+      });
+    },
+    (req: Request, res: Response) => {
+      res.setHeader("Content-Type", "application/json");
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+        const url = "/uploads/" + req.file.filename;
+        res.status(200).json({ url });
+        return;
+      } catch (err: any) {
+        return res.status(500).json({ message: err?.message || "Upload failed" });
+      }
+    }
+  );
+  app.use("/api/upload", uploadRouter);
+  app.use("/api/upload/", uploadRouter);
 
   // Auth Routes
   app.post(api.auth.login.path, (req, res, next) => {
@@ -41,6 +106,35 @@ export async function registerRoutes(
         return res.status(200).json(user);
       });
     })(req, res, next);
+  });
+
+  app.post(api.auth.register.path, async (req, res) => {
+    try {
+      const input = api.auth.register.input.parse(req.body);
+
+      const existingUsers = await storage.getUsers();
+      if (existingUsers.length > 0) {
+        return res.status(403).json({
+          message:
+            "Registration is disabled after the first admin is created. Please ask an admin to add users.",
+        });
+      }
+
+      const hashedPassword = await hashPassword(input.password);
+      const user = await storage.createUser({
+        username: input.username,
+        password: hashedPassword,
+        roles: ["super_admin"],
+        isActive: true,
+      } as any);
+
+      return res.status(201).json(user);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   app.post(api.auth.logout.path, (req, res, next) => {
@@ -63,16 +157,15 @@ export async function registerRoutes(
       const user = await storage.getUserByUsername(input.username);
       
       if (user) {
-        // Generate reset token
-        const token = crypto.randomBytes(32).toString('hex');
-        const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
-        
+        const token = crypto.randomBytes(32).toString("hex");
+        const expires = new Date(Date.now() + 15 * 60 * 1000);
+
         await storage.updateUser(user.id, {
           passwordResetToken: token,
-          passwordResetExpires: expires
+          passwordResetExpires: expires,
         });
-        
-        console.log(`[Email Mock] Password reset link: /reset-password?token=${token}`);
+
+        await sendPasswordResetEmail(user.username, token);
       }
       
       // Always return success to prevent user enumeration
@@ -150,33 +243,66 @@ export async function registerRoutes(
   });
 
   // Users
-  app.get(api.users.list.path, requireAuth, requireRole(['super_admin', 'location_admin']), async (req, res) => {
-    const user = req.user as any;
-    let users = await storage.getUsers();
-    
-    // Location admin only sees users in their location
-    if (user.role === 'location_admin') {
-      users = users.filter(u => u.locationId === user.locationId);
-    }
-    
-    res.json(users);
-  });
+  const usersRouter = express.Router();
+  usersRouter.use(requireAuth, requireRole(['super_admin', 'location_admin']));
 
-  app.post(api.users.create.path, requireAuth, requireRole(['super_admin', 'location_admin']), async (req, res) => {
+  // DELETE /api/users/:id - must be registered BEFORE router so it matches first
+  app.delete("/api/users/:id", requireAuth, requireRole(['super_admin', 'location_admin']), async (req, res) => {
     try {
-      const input = api.users.create.input.parse(req.body);
-      
+      const targetId = Number(req.params.id);
       const currentUser = req.user as any;
-      if (currentUser.role === 'location_admin') {
-        input.locationId = currentUser.locationId; // Force location for location_admin
-        if (input.role === 'super_admin') {
-          return res.status(403).json({ message: "Cannot create super_admin" });
+
+      if (currentUser.id === targetId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+
+      const targetUser = await storage.getUser(targetId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const currentRoles = Array.isArray(currentUser?.roles) ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
+      const targetRoles = Array.isArray((targetUser as any)?.roles) ? (targetUser as any).roles : ((targetUser as any)?.role ? [(targetUser as any).role] : []);
+      if (currentRoles.includes('location_admin')) {
+        if (targetRoles.includes('super_admin')) {
+          return res.status(403).json({ message: "Cannot delete super admin" });
+        }
+        if (targetUser.locationId !== currentUser.locationId) {
+          return res.status(403).json({ message: "Cannot delete user from another location" });
         }
       }
 
+      await storage.deleteUser(targetId);
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  usersRouter.get("/", async (req, res) => {
+    const user = req.user as any;
+    const userRoles = Array.isArray(user?.roles) ? user.roles : (user?.role ? [user.role] : []);
+    let users = await storage.getUsers();
+    if (userRoles.includes('location_admin')) {
+      users = users.filter(u => u.locationId === user.locationId);
+    }
+    res.json(users);
+  });
+
+  usersRouter.post("/", async (req, res) => {
+    try {
+      const input = api.users.create.input.parse(req.body);
+      const currentUser = req.user as any;
+      const currentRoles = Array.isArray(currentUser?.roles) ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
+      if (currentRoles.includes('location_admin')) {
+        input.locationId = currentUser.locationId;
+        if (input.roles?.includes('super_admin')) {
+          return res.status(403).json({ message: "Cannot create super_admin" });
+        }
+      }
       input.password = await hashPassword(input.password);
-      const user = await storage.createUser(input);
-      res.status(201).json(user);
+      const created = await storage.createUser(input);
+      res.status(201).json(created);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -185,16 +311,18 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.users.update.path, requireAuth, requireRole(['super_admin', 'location_admin']), async (req, res) => {
+  usersRouter.put("/:id", async (req, res) => {
     try {
-      const input = api.users.update.input.parse(req.body);
-      
-      // Hash password if being updated
+      const raw = api.users.update.input.parse(req.body) as Record<string, unknown>;
+      const { role: _role, ...input } = raw;
       if (input.password) {
-        input.password = await hashPassword(input.password);
+        input.password = await hashPassword(input.password as string);
       }
-      
-      const user = await storage.updateUser(Number(req.params.id), input);
+      const inputRoles = input.roles;
+      if (inputRoles !== undefined && (!Array.isArray(inputRoles) || inputRoles.length === 0)) {
+        return res.status(400).json({ message: "At least one role is required" });
+      }
+      const user = await storage.updateUser(Number(req.params.id), input as any);
       res.status(200).json(user);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -204,10 +332,24 @@ export async function registerRoutes(
     }
   });
 
+  app.use("/api/users", usersRouter);
+
   // Menu Items
   app.get(api.menuItems.list.path, requireAuth, async (req, res) => {
-    const items = await storage.getMenuItems(Number(req.params.locationId));
-    res.json(items);
+    try {
+      const locationId = Number(req.params.locationId);
+      if (!Number.isFinite(locationId)) {
+        return res.status(400).json({ message: "Invalid location ID" });
+      }
+      const items = await storage.getMenuItems(locationId);
+      return res.json(items);
+    } catch (err: any) {
+      console.error("GET /api/locations/:locationId/menu-items error:", err);
+      const message = err?.message?.includes("column") && err?.message?.includes("does not exist")
+        ? "Database schema may be out of date. Run: npm run db:push"
+        : (err?.message || "Failed to fetch menu items");
+      return res.status(500).json({ message });
+    }
   });
 
   app.post(api.menuItems.create.path, requireAuth, requireRole(['super_admin', 'location_admin', 'manager']), async (req, res) => {
@@ -233,6 +375,55 @@ export async function registerRoutes(
         return res.status(400).json({ message: err.errors[0].message });
       }
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/locations/:locationId/menu-items/reorder", requireAuth, requireRole(["super_admin", "location_admin", "manager"]), async (req, res) => {
+    try {
+      const items = req.body as { id: number; sortOrder: number }[];
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Array of {id, sortOrder} required" });
+      }
+      await Promise.all(
+        items.map((item) =>
+          storage.updateMenuItem(item.id, { sortOrder: item.sortOrder } as any)
+        )
+      );
+      return res.status(200).json({ updated: items.length });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message || "Failed to reorder" });
+    }
+  });
+
+  app.post("/api/locations/:locationId/categories/rename", requireAuth, requireRole(["super_admin", "location_admin", "manager"]), async (req, res) => {
+    try {
+      const locationId = Number(req.params.locationId);
+      const { oldName, newName } = req.body as { oldName?: string; newName?: string };
+      if (!oldName || !newName || typeof oldName !== "string" || typeof newName !== "string") {
+        return res.status(400).json({ message: "oldName and newName required" });
+      }
+      const count = await storage.renameCategory(locationId, oldName.trim(), newName.trim());
+      return res.status(200).json({ updated: count });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message || "Failed to rename category" });
+    }
+  });
+
+  app.post("/api/locations/:locationId/categories/delete", requireAuth, requireRole(["super_admin", "location_admin", "manager"]), async (req, res) => {
+    try {
+      const locationId = Number(req.params.locationId);
+      const { categoryName } = req.body as { categoryName?: string };
+      if (!categoryName || typeof categoryName !== "string") {
+        return res.status(400).json({ message: "categoryName required" });
+      }
+      const name = categoryName.trim();
+      if (name === "Uncategorized") {
+        return res.status(400).json({ message: "Cannot delete the default Uncategorized category" });
+      }
+      const count = await storage.renameCategory(locationId, name, "Uncategorized");
+      return res.status(200).json({ updated: count });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message || "Failed to delete category" });
     }
   });
 
@@ -265,22 +456,59 @@ export async function registerRoutes(
     });
   });
 
-  // Modifier Groups
+  // Modifier Groups (all for a location - for "add existing group" dropdown and library page)
+  app.get("/api/locations/:locationId/modifier-groups", requireAuth, async (req, res) => {
+    try {
+      const locationId = Number(req.params.locationId);
+      if (!Number.isInteger(locationId)) return res.status(400).json({ error: "Invalid locationId" });
+      const groups = await storage.getModifierGroups(locationId);
+      const withCounts = await Promise.all(
+        groups.map(async (g) => {
+          const options = await storage.getModifierOptions(g.id);
+          return {
+            ...g,
+            isRequired: g.isRequired ?? (g as any).is_required ?? false,
+            optionsCount: options.length,
+          };
+        })
+      );
+      res.json(withCounts);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch modifier groups" });
+    }
+  });
+
   app.get("/api/menu-items/:menuItemId/modifiers", requireAuth, async (req, res) => {
     try {
       const menuItemId = Number(req.params.menuItemId);
-      console.log(`[GET /modifiers] Fetching modifiers for menuItemId=${menuItemId}`);
-      
-      const groups = await storage.getModifierGroupsByMenuItem(menuItemId);
-      console.log(`[GET /modifiers] Found ${groups.length} groups: ${JSON.stringify(groups)}`);
-      
-      // For each group, get its options
-      const groupsWithOptions = await Promise.all(groups.map(async (group) => {
-        const options = await storage.getModifierOptionsByGroup(group.id);
-        return { ...group, options };
-      }));
-      
-      console.log(`[GET /modifiers] Returning: ${JSON.stringify(groupsWithOptions)}`);
+      const activeOnly = req.query.activeOnly === "true";
+      const menuItem = await storage.getMenuItem(menuItemId);
+      const loc =
+        menuItem &&
+        ((menuItem as { locationId?: number; location_id?: number }).locationId ??
+          (menuItem as { locationId?: number; location_id?: number }).location_id);
+      const locationId =
+        loc != null && Number.isFinite(Number(loc)) ? Number(loc) : undefined;
+      let groups = await storage.getModifierGroupsByMenuItem(menuItemId, locationId);
+      if (activeOnly) {
+        groups = groups.filter((g) => g.isActive !== false);
+      }
+
+      // For each group, get its options (normalize isActive for client)
+      const groupsWithOptions = await Promise.all(
+        groups.map(async (group) => {
+          const options = await storage.getModifierOptions(group.id);
+          const normalized = options.map((o: any) => ({
+            ...o,
+            isActive: o.isActive ?? o.is_active ?? true,
+          }));
+          return {
+            ...group,
+            isRequired: group.isRequired ?? (group as any).is_required ?? false,
+            options: normalized,
+          };
+        }),
+      );
       res.json(groupsWithOptions);
     } catch (err) {
       console.error(`[GET /modifiers] Error:`, err);
@@ -290,33 +518,100 @@ export async function registerRoutes(
 
   app.post("/api/modifier-groups", requireAuth, async (req, res) => {
     try {
-      const { name, menuItemId, locationId } = req.body;
-      console.log(`[ModifierGroup] Creating: name=${name}, menuItemId=${menuItemId}, locationId=${locationId}`);
-      
-      if (!name || !menuItemId || !locationId) {
-        return res.status(400).json({ error: "Invalid modifier group data" });
+      const { name, menuItemId, locationId, dependsOnOptionId, dependsOnGroupId } = req.body;
+      if (!name || !locationId) {
+        return res.status(400).json({ error: "Invalid modifier group data (name and locationId required)" });
       }
-      
-      const group = await storage.createModifierGroup({ 
-        name, 
-        menuItemId: Number(menuItemId), 
-        locationId: Number(locationId) 
-      });
-      
+      const locId = Number(locationId);
+      const payload: Record<string, unknown> = {
+        name: String(name).trim(),
+        locationId: locId,
+        menuItemId: menuItemId != null && menuItemId !== "" ? Number(menuItemId) : null,
+      };
+      if (dependsOnOptionId != null) payload.dependsOnOptionId = Number(dependsOnOptionId);
+      if (dependsOnGroupId != null) payload.dependsOnGroupId = Number(dependsOnGroupId);
+      if (req.body.isRequired !== undefined) payload.isRequired = Boolean(req.body.isRequired);
+      const group = await storage.createModifierGroup(payload as any);
+      const mid = menuItemId != null && menuItemId !== "" ? Number(menuItemId) : null;
+      if (mid != null && group?.id != null) {
+        await storage.attachModifierGroupToItem(mid, group.id);
+      }
       console.log(`[ModifierGroup] Created successfully: ${JSON.stringify(group)}`);
       res.status(201).json(group);
-    } catch (err) {
+    } catch (err: any) {
       console.error(`[ModifierGroup] Creation failed:`, err);
-      res.status(500).json({ error: "Failed to create modifier group" });
+      res.status(500).json({ error: err?.message || "Failed to create modifier group" });
+    }
+  });
+
+  app.put("/api/modifier-groups/:id", requireAuth, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const updates = req.body as { name?: string; sortOrder?: number; isActive?: boolean; isRequired?: boolean; dependsOnOptionId?: number | null; dependsOnGroupId?: number | null };
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No updates provided" });
+      }
+      const payload: Record<string, unknown> = {};
+      if (typeof updates.name === "string") payload.name = updates.name;
+      if (typeof updates.sortOrder === "number") payload.sortOrder = updates.sortOrder;
+      if (typeof updates.isActive === "boolean") payload.isActive = updates.isActive;
+      if (typeof updates.isRequired === "boolean") payload.isRequired = updates.isRequired;
+      if (updates.dependsOnOptionId !== undefined) payload.dependsOnOptionId = updates.dependsOnOptionId == null ? null : Number(updates.dependsOnOptionId);
+      if (updates.dependsOnGroupId !== undefined) payload.dependsOnGroupId = updates.dependsOnGroupId == null ? null : Number(updates.dependsOnGroupId);
+      const group = await storage.updateModifierGroup(id, payload as any);
+      const g = group as Record<string, unknown>;
+      res.status(200).json({
+        ...g,
+        isRequired: g.isRequired ?? (g as any).is_required ?? false,
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to update modifier group" });
     }
   });
 
   app.delete("/api/modifier-groups/:id", requireAuth, async (req, res) => {
     try {
-      await storage.deleteModifierGroup(Number(req.params.id));
-      res.sendStatus(204);
-    } catch (err) {
-      res.status(500).json({ error: "Failed to delete modifier group" });
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id)) {
+        return res.status(400).json({ error: "Invalid modifier group id" });
+      }
+      await storage.deleteModifierGroup(id);
+      res.status(200).json({ success: true });
+    } catch (err: any) {
+      console.error("[DELETE modifier-groups]", err);
+      res.status(500).json({
+        error: err?.message || "Failed to delete modifier group",
+      });
+    }
+  });
+
+  // Attach existing modifier group to menu item
+  app.post("/api/menu-items/:menuItemId/modifier-groups", requireAuth, async (req, res) => {
+    try {
+      const menuItemId = Number(req.params.menuItemId);
+      const { modifierGroupId } = req.body as { modifierGroupId?: number };
+      if (!Number.isInteger(menuItemId) || modifierGroupId == null || !Number.isInteger(Number(modifierGroupId))) {
+        return res.status(400).json({ error: "menuItemId and modifierGroupId required" });
+      }
+      await storage.attachModifierGroupToItem(menuItemId, Number(modifierGroupId));
+      res.status(200).json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Failed to attach modifier group" });
+    }
+  });
+
+  // Detach modifier group from one menu item (group stays for other items)
+  app.delete("/api/menu-items/:menuItemId/modifier-groups/:groupId", requireAuth, async (req, res) => {
+    try {
+      const menuItemId = Number(req.params.menuItemId);
+      const groupId = Number(req.params.groupId);
+      if (!Number.isInteger(menuItemId) || !Number.isInteger(groupId)) {
+        return res.status(400).json({ error: "Invalid menuItemId or groupId" });
+      }
+      await storage.detachModifierGroupFromItem(menuItemId, groupId);
+      res.status(200).json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Failed to detach modifier group" });
     }
   });
 
@@ -338,12 +633,41 @@ export async function registerRoutes(
     }
   });
 
+  app.put("/api/modifier-options/:id", requireAuth, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const updates = (req.body && typeof req.body === "object") ? req.body as { name?: string; priceDelta?: number; sortOrder?: number; isActive?: boolean } : {};
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No updates provided" });
+      }
+      const payload: Record<string, unknown> = {};
+      if (typeof updates.name === "string") payload.name = updates.name;
+      if (typeof updates.priceDelta === "number") payload.priceDelta = updates.priceDelta;
+      if (typeof updates.sortOrder === "number") payload.sortOrder = updates.sortOrder;
+      if (typeof updates.isActive === "boolean") payload.isActive = updates.isActive;
+      console.log(`[PUT /modifier-options/${id}] payload:`, JSON.stringify(payload));
+      const option = await storage.updateModifierOption(id, payload as any);
+      if (!option) {
+        return res.status(404).json({ error: "Modifier option not found" });
+      }
+      const o = option as Record<string, unknown>;
+      const isActive =
+        typeof o.isActive === "boolean" ? o.isActive
+        : typeof (o as any).is_active === "boolean" ? (o as any).is_active
+        : true;
+      console.log(`[PUT /modifier-options/${id}] DB returned isActive=${isActive}, raw:`, JSON.stringify({ isActive: o.isActive, is_active: (o as any).is_active }));
+      return res.status(200).json({ ...o, isActive });
+    } catch (err) {
+      return res.status(500).json({ error: "Failed to update modifier option" });
+    }
+  });
+
   app.delete("/api/modifier-options/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteModifierOption(Number(req.params.id));
-      res.sendStatus(204);
+      return res.status(200).json({ success: true });
     } catch (err) {
-      res.status(500).json({ error: "Failed to delete modifier option" });
+      return res.status(500).json({ error: "Failed to delete modifier option" });
     }
   });
 

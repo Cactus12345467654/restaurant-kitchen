@@ -5,9 +5,13 @@ import {
   UtensilsCrossed, 
   Users as UsersIcon, 
   ChefHat,
-  LogOut
+  LogOut,
+  Layers,
+  ConciergeBell,
+  BarChart3
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation, LanguageSwitcher } from "@/i18n";
 import {
   Sidebar,
   SidebarContent,
@@ -24,45 +28,64 @@ import { Button } from "@/components/ui/button";
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
 
   if (!user) return null;
 
-  const role = user.role;
+  const userRoles = Array.isArray(user.roles) ? user.roles : ((user as any).role ? [(user as any).role] : []);
   
   const navItems = [
     {
-      title: "Dashboard",
+      title: t("nav.dashboard"),
       icon: LayoutDashboard,
       href: "/",
       roles: ["super_admin", "location_admin", "manager"],
     },
     {
-      title: "Locations",
+      title: t("nav.locations"),
       icon: MapPin,
       href: "/locations",
       roles: ["super_admin"],
     },
     {
-      title: "Menu Management",
+      title: t("nav.menu"),
       icon: UtensilsCrossed,
       href: "/menu",
       roles: ["super_admin", "location_admin", "manager"],
     },
     {
-      title: "User Management",
+      title: t("nav.modifiers"),
+      icon: Layers,
+      href: "/modifiers",
+      roles: ["super_admin", "location_admin", "manager"],
+    },
+    {
+      title: t("nav.users"),
       icon: UsersIcon,
       href: "/users",
       roles: ["super_admin", "location_admin"],
     },
     {
-      title: "Kitchen Screen",
+      title: t("nav.waiter"),
+      icon: ConciergeBell,
+      href: "/waiter",
+      roles: ["super_admin", "location_admin", "manager", "waiter"],
+    },
+    {
+      title: t("nav.kitchen"),
       icon: ChefHat,
       href: "/kitchen",
       roles: ["super_admin", "location_admin", "manager", "kitchen_staff"],
     },
+    {
+      title: t("nav.statistics"),
+      icon: BarChart3,
+      href: "/statistics",
+      roles: ["super_admin", "location_admin", "manager"],
+    },
   ];
 
-  const allowedItems = navItems.filter(item => item.roles.includes(role));
+  const allowedItems = navItems.filter(item => item.roles.some(r => userRoles.includes(r)));
 
   return (
     <Sidebar variant="inset" className="border-r border-border/50">
@@ -70,16 +93,16 @@ export function AppSidebar() {
         <div className="p-6 pb-2">
           <h1 className="text-2xl font-bold text-gradient-primary font-display flex items-center gap-2">
             <ChefHat className="w-6 h-6 text-primary" />
-            Brio
+            {t("nav.brand")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1 font-medium">
-            Kitchen Management
+            {t("nav.subtitle")}
           </p>
         </div>
         
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground font-semibold px-6 mt-4 mb-2">
-            Navigation
+            {t("nav.navigation")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-3 space-y-1">
@@ -115,17 +138,22 @@ export function AppSidebar() {
             </div>
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-semibold truncate text-foreground">{user.username}</span>
-              <span className="text-xs text-muted-foreground capitalize truncate">{user.role.replace('_', ' ')}</span>
+              <span className="text-xs text-muted-foreground capitalize truncate">
+              {(Array.isArray(user.roles) ? user.roles : ((user as any).role ? [(user as any).role] : [])).map((r: string) => r.replace('_', ' ')).join(', ')}
+            </span>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            onClick={() => logout()}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button 
+              variant="ghost" 
+              className="justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              onClick={() => logout()}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              {t("common.signOut")}
+            </Button>
+            <LanguageSwitcher />
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

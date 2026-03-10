@@ -1,7 +1,14 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, primaryKey } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Used by connect-pg-simple (express-session). Defined here so drizzle-kit push does not drop it.
+export const session = pgTable("session", {
+  sid: text("sid").primaryKey(),
+  sess: text("sess").notNull(), // JSON stored as text by connect-pg-simple
+  expire: timestamp("expire", { withTimezone: true }).notNull(),
+});
 
 export const locations = pgTable("locations", {
   id: serial("id").primaryKey(),
@@ -14,7 +21,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(), // Used as email
   password: text("password").notNull(),
-  role: text("role").notNull(), // 'super_admin', 'location_admin', 'kitchen_staff', 'manager'
+  roles: text("roles").array().notNull(), // ['super_admin', 'location_admin', 'kitchen_staff', 'waiter', 'manager']
   locationId: integer("location_id").references(() => locations.id),
   isActive: boolean("is_active").default(true),
   passwordResetToken: text("password_reset_token"),
@@ -29,6 +36,8 @@ export const menuItems = pgTable("menu_items", {
   price: integer("price").notNull(), // stored in cents
   category: text("category").notNull(),
   isAvailable: boolean("is_available").default(true),
+  imageUrl: text("image_url"),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -40,6 +49,9 @@ export const modifierGroups = pgTable("modifier_groups", {
   description: text("description"),
   sortOrder: integer("sort_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
+  isRequired: boolean("is_required").notNull().default(false),
+  dependsOnOptionId: integer("depends_on_option_id"), // optional FK to modifier_options.id (no DB FK to avoid circular ref)
+  dependsOnGroupId: integer("depends_on_group_id").references(() => modifierGroups.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -55,6 +67,16 @@ export const modifierOptions = pgTable("modifier_options", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Which modifier groups are attached to which menu items (shared groups: one group, many items)
+export const menuItemModifierGroups = pgTable(
+  "menu_item_modifier_groups",
+  {
+    menuItemId: integer("menu_item_id").notNull().references(() => menuItems.id, { onDelete: "cascade" }),
+    modifierGroupId: integer("modifier_group_id").notNull().references(() => modifierGroups.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.menuItemId, t.modifierGroupId] })]
+);
 
 export const usersRelations = relations(users, ({ one }) => ({
   location: one(locations, {
@@ -91,7 +113,9 @@ export const menuItemsRelations = relations(menuItems, ({ one, many }) => ({
 }));
 
 export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true });
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, passwordResetToken: true, passwordResetExpires: true });
+export const insertUserSchema = createInsertSchema(users)
+  .omit({ id: true, createdAt: true })
+  .extend({ roles: z.array(z.string()).min(1, "At least one role is required") });
 export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: true, createdAt: true });
 export const insertModifierGroupSchema = createInsertSchema(modifierGroups).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertModifierOptionSchema = createInsertSchema(modifierOptions).omit({ id: true, createdAt: true, updatedAt: true });
@@ -115,7 +139,10 @@ export type CreateLocationRequest = InsertLocation;
 export type UpdateLocationRequest = Partial<InsertLocation>;
 
 export type CreateUserRequest = InsertUser;
-export type UpdateUserRequest = Partial<InsertUser>;
+export type UpdateUserRequest = Partial<InsertUser> & {
+  passwordResetToken?: string | null;
+  passwordResetExpires?: Date | null;
+};
 
 export type CreateMenuItemRequest = InsertMenuItem;
 export type UpdateMenuItemRequest = Partial<InsertMenuItem>;

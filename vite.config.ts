@@ -36,5 +36,11 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      "/api": {
+        target: process.env.API_SERVER_URL || "http://127.0.0.1:5000",
+        changeOrigin: true,
+      },
+    },
   },
 });

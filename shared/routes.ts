@@ -42,6 +42,19 @@ export const api = {
         200: z.custom<typeof users.$inferSelect>().nullable(),
       }
     },
+    register: {
+      method: 'POST' as const,
+      path: '/api/register' as const,
+      input: z.object({
+        username: z.string().email(),
+        password: z.string().min(8),
+      }),
+      responses: {
+        201: z.custom<typeof users.$inferSelect>(),
+        400: errorSchemas.validation,
+        403: errorSchemas.forbidden,
+      }
+    },
     forgotPassword: {
       method: 'POST' as const,
       path: '/api/forgot-password' as const,
@@ -120,6 +133,16 @@ export const api = {
       responses: {
         200: z.custom<typeof users.$inferSelect>(),
         400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/users/:id' as const,
+      responses: {
+        204: z.void(),
+        400: errorSchemas.validation,
+        403: errorSchemas.forbidden,
         404: errorSchemas.notFound,
       },
     },

@@ -1,115 +1,229 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useReports } from "@/hooks/use-reports";
+import { useLocations } from "@/hooks/use-locations";
+import { useTranslation } from "@/i18n";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Card } from "@/components/ui/card";
-import { DollarSign, ShoppingBag, Utensils, TrendingUp } from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
-} from "recharts";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ConciergeBell,
+  ChefHat,
+  ExternalLink,
+  ShoppingBag,
+  Flame,
+  CheckCircle2,
+  HandPlatter,
+  MapPin,
+} from "lucide-react";
 
-// Mock data for the chart since the API only returns high-level overview
-const mockChartData = [
-  { name: 'Mon', revenue: 4000 },
-  { name: 'Tue', revenue: 3000 },
-  { name: 'Wed', revenue: 5000 },
-  { name: 'Thu', revenue: 4500 },
-  { name: 'Fri', revenue: 6000 },
-  { name: 'Sat', revenue: 8000 },
-  { name: 'Sun', revenue: 7500 },
-];
+function isSuperAdmin(user: { role?: string; roles?: string[] } | null | undefined) {
+  if (!user) return false;
+  if (Array.isArray(user.roles)) return user.roles.includes("super_admin");
+  return user.role === "super_admin";
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
-  
-  // Managers and Location Admins only see their location's stats
-  const locationId = user?.role !== 'super_admin' ? user?.locationId : undefined;
-  const { data: reports, isLoading } = useReports(locationId);
+  const { t } = useTranslation();
+  const { data: locations } = useLocations();
+
+  const assignedLocationId = user?.locationId ?? null;
+  const showLocationSelector = isSuperAdmin(user);
+
+  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
+    showLocationSelector ? null : assignedLocationId,
+  );
+
+  useEffect(() => {
+    if (!showLocationSelector && assignedLocationId) {
+      setSelectedLocationId(assignedLocationId);
+    }
+    if (showLocationSelector && !selectedLocationId && locations?.length) {
+      setSelectedLocationId(locations[0].id);
+    }
+  }, [showLocationSelector, assignedLocationId, locations, selectedLocationId]);
+
+  const currentLocation = locations?.find((l) => l.id === selectedLocationId);
 
   return (
-    <ProtectedRoute allowedRoles={['super_admin', 'location_admin', 'manager']}>
+    <ProtectedRoute allowedRoles={["super_admin", "location_admin", "manager"]}>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Header + Location control */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">
+              {t("dashboard.title")}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {isSuperAdmin(user)
+                ? t("dashboard.overviewAll")
+                : t("dashboard.overviewLocation")}
+            </p>
+          </div>
+
+          {showLocationSelector ? (
+            <Select
+              value={selectedLocationId?.toString() ?? ""}
+              onValueChange={(v) => setSelectedLocationId(Number(v))}
+            >
+              <SelectTrigger className="w-[260px]">
+                <SelectValue placeholder={t("dashboard.selectLocation")} />
+              </SelectTrigger>
+              <SelectContent>
+                {(locations ?? []).map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id.toString()}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : currentLocation ? (
+            <Badge
+              variant="secondary"
+              className="text-sm px-3 py-1.5 gap-1.5 rounded-lg"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              {currentLocation.name}
+            </Badge>
+          ) : null}
+        </div>
+
+        {/* Workspace cards */}
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            {user?.role === 'super_admin' 
-              ? "Overview across all locations" 
-              : "Overview for your location"}
-          </p>
+          <h2 className="text-lg font-display font-semibold text-foreground mb-4">
+            {t("dashboard.workspaces")}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Waiter workspace */}
+            <Card className="p-6 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <ConciergeBell className="w-16 h-16 text-primary" />
+              </div>
+              <div className="relative z-10 space-y-4">
+                <div>
+                  <h3 className="text-xl font-display font-bold text-foreground">
+                    {t("dashboard.waiterScreen")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t("dashboard.waiterDesc")}
+                  </p>
+                </div>
+                <Button
+                  onClick={() =>
+                    window.open(
+                      `/waiter/view?locationId=${selectedLocationId}`,
+                      "_blank",
+                    )
+                  }
+                  disabled={!selectedLocationId}
+                  className="gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {t("dashboard.openWaiter")}
+                </Button>
+              </div>
+            </Card>
+
+            {/* Kitchen workspace */}
+            <Card className="p-6 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <ChefHat className="w-16 h-16 text-orange-500" />
+              </div>
+              <div className="relative z-10 space-y-4">
+                <div>
+                  <h3 className="text-xl font-display font-bold text-foreground">
+                    {t("dashboard.kitchenScreen")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t("dashboard.kitchenDesc")}
+                  </p>
+                </div>
+                <Button
+                  onClick={() =>
+                    window.open(`/kitchen/view?locationId=${selectedLocationId}`, "_blank")
+                  }
+                  disabled={!selectedLocationId}
+                  className="gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {t("dashboard.openKitchen")}
+                </Button>
+              </div>
+            </Card>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-              <ShoppingBag className="w-16 h-16 text-primary" />
-            </div>
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-muted-foreground mb-1">Total Orders</p>
-              <h3 className="text-4xl font-display font-bold text-foreground">
-                {isLoading ? "-" : reports?.totalOrders.toLocaleString() || 0}
-              </h3>
-              <p className="text-xs text-emerald-400 mt-2 flex items-center font-medium">
-                <TrendingUp className="w-3 h-3 mr-1" /> +12% from last week
-              </p>
-            </div>
-          </Card>
+        {/* Statistics (placeholder) */}
+        <div>
+          <h2 className="text-lg font-display font-semibold text-foreground mb-4">
+            {t("dashboard.statistics")}
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-5 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <ShoppingBag className="w-12 h-12 text-blue-500" />
+              </div>
+              <div className="relative z-10">
+                <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  {t("dashboard.activeOrders")}
+                </p>
+                <h3 className="text-3xl font-display font-bold text-foreground">
+                  0
+                </h3>
+              </div>
+            </Card>
 
-          <Card className="p-6 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-              <DollarSign className="w-16 h-16 text-emerald-500" />
-            </div>
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-muted-foreground mb-1">Total Revenue</p>
-              <h3 className="text-4xl font-display font-bold text-foreground">
-                {isLoading ? "-" : `$${((reports?.totalRevenue || 0) / 100).toFixed(2)}`}
-              </h3>
-              <p className="text-xs text-emerald-400 mt-2 flex items-center font-medium">
-                <TrendingUp className="w-3 h-3 mr-1" /> +8% from last week
-              </p>
-            </div>
-          </Card>
+            <Card className="p-5 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Flame className="w-12 h-12 text-orange-500" />
+              </div>
+              <div className="relative z-10">
+                <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  {t("dashboard.preparingOrders")}
+                </p>
+                <h3 className="text-3xl font-display font-bold text-foreground">
+                  0
+                </h3>
+              </div>
+            </Card>
 
-          <Card className="p-6 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Utensils className="w-16 h-16 text-blue-500" />
-            </div>
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-muted-foreground mb-1">Active Menu Items</p>
-              <h3 className="text-4xl font-display font-bold text-foreground">
-                {isLoading ? "-" : reports?.activeItems || 0}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-2 font-medium">
-                Currently available
-              </p>
-            </div>
-          </Card>
+            <Card className="p-5 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+              </div>
+              <div className="relative z-10">
+                <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  {t("dashboard.readyOrders")}
+                </p>
+                <h3 className="text-3xl font-display font-bold text-foreground">
+                  0
+                </h3>
+              </div>
+            </Card>
+
+            <Card className="p-5 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <HandPlatter className="w-12 h-12 text-purple-500" />
+              </div>
+              <div className="relative z-10">
+                <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+                  {t("dashboard.completedToday")}
+                </p>
+                <h3 className="text-3xl font-display font-bold text-foreground">
+                  0
+                </h3>
+              </div>
+            </Card>
+          </div>
         </div>
-
-        <Card className="p-6 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl">
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold font-display">Revenue Overview (Mocked)</h3>
-            <p className="text-sm text-muted-foreground">Daily performance tracking</p>
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272A" vertical={false} />
-                <XAxis dataKey="name" stroke="#A1A1AA" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#A1A1AA" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
-                <Tooltip 
-                  cursor={{ fill: '#27272A' }}
-                  contentStyle={{ backgroundColor: '#09090B', border: '1px solid #27272A', borderRadius: '12px' }}
-                />
-                <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
       </div>
     </ProtectedRoute>
   );

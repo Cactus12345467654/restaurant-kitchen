@@ -4,6 +4,15 @@ import { z } from "zod";
 
 type User = z.infer<typeof api.auth.me.responses[200]>;
 
+export function getUserRoles(user: (User & { role?: string }) | null | undefined): string[] {
+  if (!user) return [];
+  return Array.isArray(user.roles) ? user.roles : ((user as any).role ? [(user as any).role] : []);
+}
+
+export function hasRole(user: User | null | undefined, role: string): boolean {
+  return getUserRoles(user).includes(role);
+}
+
 export function useAuth() {
   const queryClient = useQueryClient();
 
@@ -33,8 +42,10 @@ export function useAuth() {
       }
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
+    onSuccess: (user) => {
+      // Uzreiz iestatām lietotāju cache, lai navigācija strādātu no pirmās reizes
+      // (negaidām refetch, kas varētu radīt race condition)
+      queryClient.setQueryData([api.auth.me.path], user);
     },
   });
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useLocations, useCreateLocation, useUpdateLocation } from "@/hooks/use-locations";
+import { useTranslation } from "@/i18n";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ export default function Locations() {
   const createMutation = useCreateLocation();
   const updateMutation = useUpdateLocation();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -38,14 +40,14 @@ export default function Locations() {
     try {
       if (editingId) {
         await updateMutation.mutateAsync({ id: editingId, ...formData });
-        toast({ title: "Location updated successfully" });
+        toast({ title: t("locations.updated") });
       } else {
         await createMutation.mutateAsync(formData);
-        toast({ title: "Location created successfully" });
+        toast({ title: t("locations.created_toast") });
       }
       setIsDialogOpen(false);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
     }
   };
 
@@ -54,14 +56,14 @@ export default function Locations() {
       <div className="space-y-6 animate-in fade-in duration-500">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Locations</h1>
-            <p className="text-muted-foreground mt-1">Manage all restaurant branches</p>
+            <h1 className="text-3xl font-display font-bold text-foreground">{t("locations.title")}</h1>
+            <p className="text-muted-foreground mt-1">{t("locations.subtitle")}</p>
           </div>
           <Button 
             onClick={openCreate}
             className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
           >
-            <Plus className="w-4 h-4 mr-2" /> Add Location
+            <Plus className="w-4 h-4 mr-2" /> {t("locations.addLocation")}
           </Button>
         </div>
 
@@ -72,17 +74,17 @@ export default function Locations() {
             <Table>
               <TableHeader className="bg-white/5">
                 <TableRow className="border-border/50 hover:bg-transparent">
-                  <TableHead className="font-semibold text-muted-foreground">Name</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">Address</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">Created</TableHead>
-                  <TableHead className="text-right font-semibold text-muted-foreground">Actions</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">{t("common.name")}</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">{t("locations.address")}</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">{t("locations.created")}</TableHead>
+                  <TableHead className="text-right font-semibold text-muted-foreground">{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {locations?.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
-                      No locations found. Add your first one!
+                      {t("locations.noLocations")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -113,34 +115,34 @@ export default function Locations() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-md bg-card border-border/50 rounded-2xl">
             <DialogHeader>
-              <DialogTitle className="font-display text-xl">{editingId ? 'Edit Location' : 'Add New Location'}</DialogTitle>
+              <DialogTitle className="font-display text-xl">{editingId ? t("locations.editLocation") : t("locations.addNew")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label>Location Name</Label>
+                <Label>{t("locations.locationName")}</Label>
                 <Input 
                   value={formData.name} 
                   onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  placeholder="e.g. Downtown Branch"
+                  placeholder={t("locations.locationNamePlaceholder")}
                   required
                   className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Address</Label>
+                <Label>{t("locations.address")}</Label>
                 <Input 
                   value={formData.address} 
                   onChange={(e) => setFormData({...formData, address: e.target.value})} 
-                  placeholder="e.g. 123 Main St, City"
+                  placeholder={t("locations.addressPlaceholder")}
                   required
                   className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
                 />
               </div>
               <div className="pt-4 flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-xl">Cancel</Button>
+                <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-xl">{t("common.cancel")}</Button>
                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="rounded-xl">
                   {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? 'Save Changes' : 'Create Location'}
+                  {editingId ? t("common.saveChanges") : t("locations.createLocation")}
                 </Button>
               </div>
             </form>

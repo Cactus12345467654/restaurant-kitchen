@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -75,6 +76,14 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
+  // Never serve HTML for /api – if a request reaches here, return 404 JSON
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api")) {
+      return res.status(404).setHeader("Content-Type", "application/json").json({ message: "Not found" });
+    }
+    next();
+  });
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
@@ -93,8 +102,7 @@ app.use((req, res, next) => {
   httpServer.listen(
     {
       port,
-      host: "0.0.0.0",
-      reusePort: true,
+      host: process.env.HOST || "0.0.0.0",
     },
     () => {
       log(`serving on port ${port}`);

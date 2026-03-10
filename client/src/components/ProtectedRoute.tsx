@@ -16,11 +16,17 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   useEffect(() => {
     if (!isLoading && !user) {
       setLocation("/login");
-    } else if (!isLoading && user && allowedRoles && !allowedRoles.includes(user.role)) {
-      if (user.role === 'kitchen_staff') {
+    } else if (!isLoading && user && allowedRoles) {
+      const userRoles = Array.isArray(user.roles) ? user.roles : ((user as any).role ? [(user as any).role] : []);
+      const hasAccess = allowedRoles.some((r) => userRoles.includes(r));
+      if (!hasAccess) {
+      if (userRoles.includes('kitchen_staff')) {
         setLocation("/kitchen");
+      } else if (userRoles.includes('waiter')) {
+        setLocation("/waiter");
       } else {
         setLocation("/");
+      }
       }
     }
   }, [user, isLoading, setLocation, allowedRoles]);
@@ -33,7 +39,9 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  if (!user || (allowedRoles && !allowedRoles.includes(user.role))) {
+  const userRoles = user ? (Array.isArray(user.roles) ? user.roles : ((user as any).role ? [(user as any).role] : [])) : [];
+  const hasAccess = !allowedRoles || allowedRoles.some((r) => userRoles.includes(r));
+  if (!user || !hasAccess) {
     return null;
   }
 
