@@ -986,6 +986,9 @@ export default function Menu() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    setBrokenImages(new Set());
+  }, [menuItems]);
   const handleImgError = useCallback((id: number) => {
     setBrokenImages((prev) => { const next = new Set(prev); next.add(id); return next; });
   }, []);
