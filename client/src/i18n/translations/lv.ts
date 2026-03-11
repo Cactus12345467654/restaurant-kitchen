@@ -56,10 +56,9 @@ export const lv = {
   "dashboard.openKitchen": "Atvērt virtuves logu",
   "dashboard.workspaces": "Darba vides",
   "dashboard.statistics": "Statistika",
-  "dashboard.activeOrders": "Jauni pasūtījumi",
-  "dashboard.preparingOrders": "Gatavošanā",
-  "dashboard.readyOrders": "Gatavi",
-  "dashboard.completedToday": "Pasniegti šodien",
+  "dashboard.ordersToday": "Pasūtījumi šodien",
+  "dashboard.ordersThisWeek": "Pasūtījumi šonedēļ",
+  "dashboard.avgBasketSize": "Vidējais groza izmērs",
   "dashboard.mon": "Pr",
   "dashboard.tue": "Ot",
   "dashboard.wed": "Tr",
@@ -347,6 +346,7 @@ export const lv = {
   "statsChart.weeklyByDay": "Pasūtījumi pa dienām (pēdējās 7 dienas)",
   "statsChart.revenue": "Ieņēmumi",
   "statsChart.orders": "Pasūtījumi",
+  "statsChart.avgBasket": "Vid. grozs",
 
   "tableReport.filtersTitle": "Filtri",
   "tableReport.month": "Mēnesis",
@@ -404,6 +404,8 @@ export const lv = {
   "datetimePicker.now": "Tagad",
   "datetimePicker.done": "Gatavs",
   "datetimePicker.time": "Laiks",
+  "datetimePicker.hour": "Stunda",
+  "datetimePicker.minute": "Minūte",
 
   // 404
   "notFound.title": "404 Lapa nav atrasta",

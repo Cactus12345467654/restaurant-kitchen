@@ -58,10 +58,9 @@ export const en: Record<TranslationKey, string> = {
   "dashboard.openKitchen": "Open Kitchen Window",
   "dashboard.workspaces": "Workspaces",
   "dashboard.statistics": "Statistics",
-  "dashboard.activeOrders": "New Orders",
-  "dashboard.preparingOrders": "Preparing",
-  "dashboard.readyOrders": "Ready",
-  "dashboard.completedToday": "Delivered Today",
+  "dashboard.ordersToday": "Orders today",
+  "dashboard.ordersThisWeek": "Orders this week",
+  "dashboard.avgBasketSize": "Avg. basket size",
   "dashboard.mon": "Mon",
   "dashboard.tue": "Tue",
   "dashboard.wed": "Wed",
@@ -349,6 +348,7 @@ export const en: Record<TranslationKey, string> = {
   "statsChart.weeklyByDay": "Orders by day (last 7 days)",
   "statsChart.revenue": "Revenue",
   "statsChart.orders": "Orders",
+  "statsChart.avgBasket": "Avg. basket",
 
   "tableReport.filtersTitle": "Filters",
   "tableReport.month": "Month",
@@ -406,6 +406,8 @@ export const en: Record<TranslationKey, string> = {
   "datetimePicker.now": "Now",
   "datetimePicker.done": "Done",
   "datetimePicker.time": "Time",
+  "datetimePicker.hour": "Hour",
+  "datetimePicker.minute": "Minute",
 
   // 404
   "notFound.title": "404 Page Not Found",

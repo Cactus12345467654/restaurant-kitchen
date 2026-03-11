@@ -4,7 +4,6 @@ import { useTranslation } from "@/i18n";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -114,26 +113,34 @@ export function DateTimePicker({
             onSelect={handleSelect}
             initialFocus
           />
-          <div className="border-t border-border/50 p-3 space-y-2">
-            <Label className="text-xs text-muted-foreground">{t("datetimePicker.time")}</Label>
-            <div className="flex gap-2 items-center">
-              <Input
-                type="number"
-                min={0}
-                max={23}
-                value={hour}
-                onChange={(e) => setHour(e.target.value)}
-                className="h-10 min-h-10 w-14 text-center text-sm leading-normal py-2 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              />
-              <span className="text-muted-foreground">:</span>
-              <Input
-                type="number"
-                min={0}
-                max={59}
-                value={minute}
-                onChange={(e) => setMinute(e.target.value)}
-                className="h-10 min-h-10 w-14 text-center text-sm leading-normal py-2 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              />
+          <div className="border-t border-border/50 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">{t("datetimePicker.time")}</Label>
+              <span className="text-sm font-medium tabular-nums">{hour}:{minute}</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground w-12 shrink-0">{t("datetimePicker.hour")}</Label>
+                <input
+                  type="range"
+                  min={0}
+                  max={23}
+                  value={parseInt(hour, 10) || 0}
+                  onChange={(e) => setHour(String(e.target.value).padStart(2, "0"))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary bg-muted"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground w-12 shrink-0">{t("datetimePicker.minute")}</Label>
+                <input
+                  type="range"
+                  min={0}
+                  max={59}
+                  value={parseInt(minute, 10) || 0}
+                  onChange={(e) => setMinute(String(e.target.value).padStart(2, "0"))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary bg-muted"
+                />
+              </div>
             </div>
           </div>
           <div className="flex gap-2 p-3 pt-0">

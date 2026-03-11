@@ -65,7 +65,7 @@ export async function registerRoutes(
     }
     const id = Number(req.path.split("/").pop());
     requireAuth(req, res, () => {
-      requireRole(["super_admin", "manager"])(req, res, async () => {
+      requireRole(["super_admin"])(req, res, async () => {
         try {
           const location = await storage.getLocation(id);
           if (!location) {
@@ -287,7 +287,7 @@ export async function registerRoutes(
     res.json(locations);
   });
 
-  app.post(api.locations.create.path, requireAuth, requireRole(['super_admin', 'manager']), async (req, res) => {
+  app.post(api.locations.create.path, requireAuth, requireRole(['super_admin']), async (req, res) => {
     try {
       const input = api.locations.create.input.parse(req.body);
       const location = await storage.createLocation(input);
@@ -302,7 +302,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.locations.update.path, requireAuth, requireRole(['super_admin', 'location_admin', 'manager']), async (req, res) => {
+  app.put(api.locations.update.path, requireAuth, requireRole(['super_admin', 'location_admin']), async (req, res) => {
     try {
       const input = api.locations.update.input.parse(req.body);
       const location = await storage.updateLocation(Number(req.params.id), input);
@@ -589,7 +589,7 @@ export async function registerRoutes(
   });
 
   // Reports
-  app.get(api.reports.overview.path, requireAuth, requireRole(['super_admin', 'location_admin', 'manager']), async (req, res) => {
+  app.get(api.reports.overview.path, requireAuth, requireRole(['super_admin', 'location_admin']), async (req, res) => {
     const locationId = req.query.locationId ? Number(req.query.locationId) : undefined;
     
     let allItems = [];

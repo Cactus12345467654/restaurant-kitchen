@@ -80,17 +80,19 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
   const { t } = useTranslation();
   const orders = useAllOrders(locationId);
 
-  const { dailyData, weeklyData, todayRevenue, weeklyRevenue } = useMemo(() => {
+  const { dailyData, weeklyData, todayRevenue, weeklyRevenue, todayAvgBasket, weeklyAvgBasket } = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const todayEnd = todayStart + 24 * 60 * 60 * 1000;
 
-    const dailyByHour: Record<number, { hour: string; gatavojas: number; pabeigti: number }> = {};
+    const dailyByHour: Record<number, { hour: string; gatavojas: number; pabeigti: number; revenue: number; orderCount: number }> = {};
     for (let h = 0; h < 24; h++) {
       dailyByHour[h] = {
         hour: `${h.toString().padStart(2, "0")}`,
         gatavojas: 0,
         pabeigti: 0,
+        revenue: 0,
+        orderCount: 0,
       };
     }
 
@@ -99,7 +101,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
     weekStart.setHours(0, 0, 0, 0);
     const weekStartTs = weekStart.getTime();
 
-    const weeklyArr: { day: string; label: string; gatavojas: number; pabeigti: number; revenue: number }[] = [];
+    const weeklyArr: { day: string; label: string; gatavojas: number; pabeigti: number; revenue: number; orderCount: number }[] = [];
     for (let d = 0; d < 7; d++) {
       const dte = new Date(weekStart);
       dte.setDate(dte.getDate() + d);
@@ -109,6 +111,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
         gatavojas: 0,
         pabeigti: 0,
         revenue: 0,
+        orderCount: 0,
       });
     }
     const dayToIndex = new Map(weeklyArr.map((e, i) => [e.day, i]));
@@ -124,6 +127,8 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
 
       if (ts >= todayStart && ts < todayEnd) {
         const hour = created.getHours();
+        dailyByHour[hour].orderCount++;
+        dailyByHour[hour].revenue += totalCents;
         if (order.status === GATAVOJAS) {
           dailyByHour[hour].gatavojas++;
         } else if (isCompleted(order.status)) {
@@ -151,11 +156,12 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
         const idx = dayToIndex.get(dayStr);
         if (idx != null) {
           const entry = weeklyArr[idx];
+          entry.orderCount++;
+          entry.revenue += totalCents;
           if (order.status === GATAVOJAS) {
             entry.gatavojas++;
           } else if (isCompleted(order.status)) {
             entry.pabeigti++;
-            entry.revenue += totalCents;
           }
         }
       }
@@ -163,11 +169,16 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
 
     const dailyArr = Object.values(dailyByHour);
 
+    const todayOrderCount = dailyArr.reduce((s, h) => s + h.orderCount, 0);
+    const weekOrderCount = weeklyArr.reduce((s, d) => s + d.orderCount, 0);
+
     return {
       dailyData: dailyArr,
       weeklyData: weeklyArr,
       todayRevenue: todayRev,
       weeklyRevenue: weekRev,
+      todayAvgBasket: todayOrderCount > 0 ? todayRev / todayOrderCount : 0,
+      weeklyAvgBasket: weekOrderCount > 0 ? weekRev / weekOrderCount : 0,
     };
   }, [orders]);
 
@@ -179,9 +190,14 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
 
       {/* Daily chart */}
       <Card className="p-6 bg-card border-border/50 rounded-2xl">
-        <p className="text-lg font-semibold text-foreground mb-1">
-          {t("statsChart.todayRevenue")}: €{(todayRevenue / 100).toFixed(2)}
-        </p>
+        <div className="flex flex-wrap items-baseline gap-x-6 mb-1">
+          <p className="text-lg font-semibold text-foreground">
+            {t("statsChart.todayRevenue")}: €{(todayRevenue / 100).toFixed(2)}
+          </p>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("statsChart.avgBasket")}: €{(todayAvgBasket / 100).toFixed(2)}
+          </p>
+        </div>
         <p className="text-sm text-muted-foreground mb-4">
           {t("statsChart.dailyByHour")}
         </p>
@@ -203,12 +219,17 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const p = payload[0]?.payload;
-                const total = (p?.gatavojas ?? 0) + (p?.pabeigti ?? 0);
+                const total = p?.orderCount ?? 0;
+                const rev = p?.revenue ?? 0;
+                const avg = total > 0 ? (rev / 100 / total).toFixed(2) : "0.00";
                 return (
                   <div className="rounded-lg border border-border/50 bg-background px-3 py-2 shadow-lg">
                     <p className="font-medium mb-1">{p?.hour ?? ""}:00</p>
                     <p className="text-xs text-muted-foreground">
                       {t("statsChart.orders")}: {total}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("statsChart.avgBasket")}: €{avg}
                     </p>
                   </div>
                 );
@@ -223,9 +244,14 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
 
       {/* Weekly chart */}
       <Card className="p-6 bg-card border-border/50 rounded-2xl">
-        <p className="text-lg font-semibold text-foreground mb-1">
-          {t("statsChart.weeklyRevenue")}: €{(weeklyRevenue / 100).toFixed(2)}
-        </p>
+        <div className="flex flex-wrap items-baseline gap-x-6 mb-1">
+          <p className="text-lg font-semibold text-foreground">
+            {t("statsChart.weeklyRevenue")}: €{(weeklyRevenue / 100).toFixed(2)}
+          </p>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("statsChart.avgBasket")}: €{(weeklyAvgBasket / 100).toFixed(2)}
+          </p>
+        </div>
         <p className="text-sm text-muted-foreground mb-4">
           {t("statsChart.weeklyByDay")}
         </p>
@@ -247,16 +273,20 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const p = payload[0]?.payload;
-                const revenue = p?.revenue != null ? (p.revenue / 100).toFixed(2) : "0.00";
-                const total = (p?.gatavojas ?? 0) + (p?.pabeigti ?? 0);
+                const cnt = p?.orderCount ?? 0;
+                const rev = p?.revenue ?? 0;
+                const avg = cnt > 0 ? (rev / 100 / cnt).toFixed(2) : "0.00";
                 return (
                   <div className="rounded-lg border border-border/50 bg-background px-3 py-2 shadow-lg">
                     <p className="font-medium mb-1">{p?.day ?? label}</p>
                     <p className="text-xs text-muted-foreground">
-                      {t("statsChart.orders")}: {total}
+                      {t("statsChart.orders")}: {cnt}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {t("statsChart.revenue")}: €{revenue}
+                      {t("statsChart.revenue")}: €{(rev / 100).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("statsChart.avgBasket")}: €{avg}
                     </p>
                   </div>
                 );

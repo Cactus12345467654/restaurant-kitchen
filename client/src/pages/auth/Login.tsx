@@ -79,12 +79,6 @@ export default function Login() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-muted-foreground">{t("auth.password")}</Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-primary hover:underline"
-                >
-                  {t("auth.forgotPassword")}
-                </Link>
               </div>
               <Input
                 id="password"
@@ -107,6 +101,7 @@ export default function Login() {
               ) : t("auth.signIn")}
             </Button>
 
+            {/* Registration link hidden for now
             <p className="text-xs text-muted-foreground mt-3">
               {t("auth.firstTime")}{" "}
               <Link
@@ -116,6 +111,7 @@ export default function Login() {
                 {t("auth.createAdmin")}
               </Link>
             </p>
+            */}
           </form>
         </div>
       </div>

@@ -34,7 +34,7 @@ export default function StatisticsLanding() {
   }, [user, locations, selectedLocationId]);
 
   return (
-    <ProtectedRoute allowedRoles={["super_admin", "location_admin", "manager"]}>
+    <ProtectedRoute allowedRoles={["super_admin", "location_admin"]}>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">
