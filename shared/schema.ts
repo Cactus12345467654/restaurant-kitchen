@@ -41,6 +41,7 @@ export const menuItems = pgTable("menu_items", {
   category: text("category").notNull(),
   isAvailable: boolean("is_available").default(true),
   imageUrl: text("image_url"),
+  imageData: text("image_data"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -1001,6 +1001,7 @@ export default function Menu() {
     category: "",
     isAvailable: true,
     imageUrl: "",
+    imageData: "" as string | null,
   });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
@@ -1126,7 +1127,7 @@ export default function Menu() {
 
   const openCreate = () => {
     setEditingId(null);
-    setFormData({ name: "", priceStr: "", category: "", isAvailable: true, imageUrl: "" });
+    setFormData({ name: "", priceStr: "", category: "", isAvailable: true, imageUrl: "", imageData: null });
     setIsDialogOpen(true);
   };
 
@@ -1138,6 +1139,7 @@ export default function Menu() {
       category: item.category,
       isAvailable: item.isAvailable,
       imageUrl: item.imageUrl ?? item.image_url ?? "",
+      imageData: null,
     });
     setIsDialogOpen(true);
     queryClient.invalidateQueries({ queryKey: ["menu-item-modifiers", item.id] });
@@ -1187,14 +1189,14 @@ export default function Menu() {
         }
         throw new Error(message);
       }
-      let data: { url?: string };
+      let data: { url?: string; imageData?: string };
       try {
         const text = await res.text();
         if (!text || text.trim().length === 0) {
           throw new Error(t("menu.emptyResponse"));
         }
         if (contentType.includes("application/json") || (text.startsWith("{") && text.trim().endsWith("}"))) {
-          data = JSON.parse(text) as { url: string };
+          data = JSON.parse(text) as { url: string; imageData?: string };
         } else {
           throw new Error(t("menu.badResponse"));
         }
@@ -1207,7 +1209,7 @@ export default function Menu() {
       if (!data?.url) {
         throw new Error(t("menu.noImageUrl"));
       }
-      setFormData((prev) => ({ ...prev, imageUrl: data.url }));
+      setFormData((prev) => ({ ...prev, imageUrl: data.url!, imageData: data.imageData || null }));
       toast({ title: t("menu.imageUploaded") });
     } catch (err: any) {
       toast({ title: t("menu.uploadFailed"), description: err.message, variant: "destructive" });
@@ -1282,7 +1284,7 @@ export default function Menu() {
       return;
     }
 
-    const payload = {
+    const payload: Record<string, any> = {
       name: formData.name,
       price: priceCents,
       category: formData.category.trim(),
@@ -1290,6 +1292,9 @@ export default function Menu() {
       locationId: selectedLocationId,
       imageUrl: formData.imageUrl || null,
     };
+    if (formData.imageData) {
+      payload.imageData = formData.imageData;
+    }
 
     try {
       if (editingId) {
@@ -1721,7 +1726,7 @@ export default function Menu() {
                           size="sm"
                           className="h-8 text-xs text-muted-foreground hover:text-foreground"
                           onClick={() =>
-                            setFormData((prev) => ({ ...prev, imageUrl: "" }))
+                            setFormData((prev) => ({ ...prev, imageUrl: "", imageData: null }))
                           }
                         >
                           {t("menu.removeImage")}

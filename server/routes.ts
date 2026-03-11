@@ -106,8 +106,12 @@ export async function registerRoutes(
         if (!req.file) {
           return res.status(400).json({ message: "No file uploaded" });
         }
+        const filePath = path.join(uploadsDir, req.file.filename);
+        const fileBuffer = fs.readFileSync(filePath);
+        const mime = req.file.mimetype || "image/jpeg";
+        const imageData = `data:${mime};base64,${fileBuffer.toString("base64")}`;
         const url = "/uploads/" + req.file.filename;
-        res.status(200).json({ url });
+        res.status(200).json({ url, imageData });
         return;
       } catch (err: any) {
         return res.status(500).json({ message: err?.message || "Upload failed" });
@@ -116,6 +120,26 @@ export async function registerRoutes(
   );
   app.use("/api/upload", uploadRouter);
   app.use("/api/upload/", uploadRouter);
+
+  app.get("/api/menu-items/:id/image", async (req: Request, res: Response) => {
+    try {
+      const item = await storage.getMenuItem(Number(req.params.id));
+      if (!item?.imageData) {
+        return res.status(404).json({ message: "No image" });
+      }
+      const match = item.imageData.match(/^data:(.+);base64,(.+)$/);
+      if (!match) {
+        return res.status(404).json({ message: "Invalid image data" });
+      }
+      const mime = match[1];
+      const buffer = Buffer.from(match[2], "base64");
+      res.setHeader("Content-Type", mime);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.send(buffer);
+    } catch {
+      return res.status(500).json({ message: "Failed to load image" });
+    }
+  });
 
   // Auth Routes
   app.post(api.auth.login.path, (req, res, next) => {
@@ -378,7 +402,13 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid location ID" });
       }
       const items = await storage.getMenuItems(locationId);
-      const normalized = items.map((it: any) => ({ ...it, imageUrl: it.imageUrl ?? it.image_url }));
+      const normalized = items.map((it: any) => {
+        const { imageData: _drop, ...rest } = it;
+        const imageUrl = it.imageData
+          ? `/api/menu-items/${it.id}/image`
+          : (it.imageUrl ?? it.image_url ?? null);
+        return { ...rest, imageUrl };
+      });
       return res.json(normalized);
     } catch (err: any) {
       console.error("GET /api/locations/:locationId/menu-items error:", err);
@@ -393,7 +423,8 @@ export async function registerRoutes(
     try {
       const input = api.menuItems.create.input.parse(req.body);
       const item = await storage.createMenuItem(input);
-      res.status(201).json(item);
+      const { imageData: _drop, ...rest } = item as any;
+      res.status(201).json({ ...rest, imageUrl: item.imageData ? `/api/menu-items/${item.id}/image` : item.imageUrl });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -406,7 +437,8 @@ export async function registerRoutes(
     try {
       const input = api.menuItems.update.input.parse(req.body);
       const item = await storage.updateMenuItem(Number(req.params.id), input);
-      res.status(200).json(item);
+      const { imageData: _drop, ...rest } = item as any;
+      res.status(200).json({ ...rest, imageUrl: item.imageData ? `/api/menu-items/${item.id}/image` : item.imageUrl });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
