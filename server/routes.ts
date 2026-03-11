@@ -127,19 +127,34 @@ export async function registerRoutes(
 
   app.get("/api/images/:id", async (req: Request, res: Response) => {
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b17aa1'},body:JSON.stringify({sessionId:'b17aa1',location:'routes.ts:GET /api/images/:id',message:'Image request received',data:{id:req.params.id},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const [row] = await db.select().from(uploadedImages).where(eq(uploadedImages.id, Number(req.params.id)));
       if (!row?.data) {
+        // #region agent log
+        fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b17aa1'},body:JSON.stringify({sessionId:'b17aa1',location:'routes.ts:GET /api/images/:id',message:'Image NOT found in DB',data:{id:req.params.id,rowExists:!!row},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         return res.status(404).json({ message: "Image not found" });
       }
       const match = row.data.match(/^data:(.+);base64,(.+)$/);
       if (!match) {
+        // #region agent log
+        fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b17aa1'},body:JSON.stringify({sessionId:'b17aa1',location:'routes.ts:GET /api/images/:id',message:'Invalid data format',data:{id:req.params.id,dataPrefix:row.data.substring(0,50)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         return res.status(404).json({ message: "Invalid image data" });
       }
       const buffer = Buffer.from(match[2], "base64");
+      // #region agent log
+      fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b17aa1'},body:JSON.stringify({sessionId:'b17aa1',location:'routes.ts:GET /api/images/:id',message:'Image served OK',data:{id:req.params.id,mime:match[1],sizeKB:Math.round(buffer.length/1024)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       res.setHeader("Content-Type", match[1]);
       res.setHeader("Cache-Control", "public, max-age=86400");
       return res.send(buffer);
-    } catch {
+    } catch (err: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b17aa1'},body:JSON.stringify({sessionId:'b17aa1',location:'routes.ts:GET /api/images/:id',message:'Image endpoint error',data:{id:req.params.id,error:err?.message},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return res.status(500).json({ message: "Failed to load image" });
     }
   });
@@ -409,6 +424,10 @@ export async function registerRoutes(
         const { imageData: _drop, ...rest } = it;
         return { ...rest, imageUrl: it.imageUrl ?? it.image_url ?? null };
       });
+      // #region agent log
+      const imgSummary = normalized.filter((n: any) => n.imageUrl).map((n: any) => ({ id: n.id, url: n.imageUrl }));
+      fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b17aa1'},body:JSON.stringify({sessionId:'b17aa1',location:'routes.ts:GET menu-items',message:'Menu items returned',data:{locationId,totalItems:normalized.length,itemsWithImages:imgSummary.length,imageUrls:imgSummary},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return res.json(normalized);
     } catch (err: any) {
       console.error("GET /api/locations/:locationId/menu-items error:", err);
