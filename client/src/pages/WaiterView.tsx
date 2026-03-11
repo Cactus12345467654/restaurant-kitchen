@@ -358,8 +358,23 @@ export default function WaiterView() {
       if (!map.has(cat)) map.set(cat, []);
       map.get(cat)!.push(item);
     });
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [menuItems]);
+    const entries = Array.from(map.entries());
+    let catOrder: string[] = [];
+    if (locationId) {
+      try { catOrder = JSON.parse(localStorage.getItem(`cat-order-${locationId}`) || "[]"); } catch { /* ignore */ }
+    }
+    if (catOrder.length > 0) {
+      const orderMap = new Map(catOrder.map((c, i) => [c, i]));
+      entries.sort(([a], [b]) => {
+        const ia = orderMap.get(a) ?? 9999;
+        const ib = orderMap.get(b) ?? 9999;
+        return ia !== ib ? ia - ib : a.localeCompare(b);
+      });
+    } else {
+      entries.sort(([a], [b]) => a.localeCompare(b));
+    }
+    return entries;
+  }, [menuItems, locationId]);
 
   if (!locationId) {
     if (isAuthLoading && !paramLocationId) {
