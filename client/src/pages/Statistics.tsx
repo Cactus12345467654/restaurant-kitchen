@@ -1,7 +1,19 @@
+import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAuth, canSelectLocation } from "@/hooks/use-auth";
+import { useLocations } from "@/hooks/use-locations";
 import { useTranslation } from "@/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MapPin } from "lucide-react";
 import { OrdersStatisticsPage } from "./statistics/OrdersStatisticsPage";
 import { ChartReportPage } from "./statistics/ChartReportPage";
 import { ProductMonthlyTableReport } from "./statistics/ProductMonthlyTableReport";
@@ -28,18 +40,62 @@ function StatsModifiersTab() {
   );
 }
 
-
-
 export default function Statistics() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { data: locations } = useLocations();
+
+  const assignedLocationId = user?.locationId ?? null;
+  const showSelector = canSelectLocation(user);
+
+  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
+    showSelector ? null : assignedLocationId,
+  );
+
+  useEffect(() => {
+    if (!showSelector && assignedLocationId) {
+      setSelectedLocationId(assignedLocationId);
+    }
+    if (showSelector && !selectedLocationId && locations?.length) {
+      setSelectedLocationId(locations[0].id);
+    }
+  }, [showSelector, assignedLocationId, locations, selectedLocationId]);
+
+  const currentLocation = locations?.find((l) => l.id === selectedLocationId);
 
   return (
     <ProtectedRoute allowedRoles={["super_admin", "location_admin"]}>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-display font-bold text-foreground">
             {t("stats.title")}
           </h1>
+
+          {showSelector ? (
+            <Select
+              value={selectedLocationId?.toString() ?? ""}
+              onValueChange={(v) => setSelectedLocationId(Number(v))}
+            >
+              <SelectTrigger className="w-[260px]">
+                <SelectValue placeholder={t("dashboard.selectLocation")} />
+              </SelectTrigger>
+              <SelectContent>
+                {(locations ?? []).map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id.toString()}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : currentLocation ? (
+            <Badge
+              variant="secondary"
+              className="text-sm px-3 py-1.5 gap-1.5 rounded-lg"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              {currentLocation.name}
+            </Badge>
+          ) : null}
         </div>
 
         <Tabs defaultValue="orders" className="w-full">
@@ -90,7 +146,7 @@ export default function Statistics() {
               <ProductMonthlyTableReport />
             </TabsContent>
             <TabsContent value="chart">
-              <ChartReportPage />
+              <ChartReportPage locationId={selectedLocationId} />
             </TabsContent>
           </div>
         </Tabs>

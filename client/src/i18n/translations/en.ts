@@ -347,6 +347,7 @@ export const en: Record<TranslationKey, string> = {
   "statsChart.dailyByHour": "Orders by hour (today)",
   "statsChart.weeklyByDay": "Orders by day (last 7 days)",
   "statsChart.revenue": "Revenue",
+  "statsChart.traded": "Traded",
   "statsChart.orders": "Orders",
   "statsChart.avgBasket": "Avg. basket",
 

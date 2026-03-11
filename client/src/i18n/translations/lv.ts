@@ -345,6 +345,7 @@ export const lv = {
   "statsChart.dailyByHour": "Pasūtījumi pa stundām (šodien)",
   "statsChart.weeklyByDay": "Pasūtījumi pa dienām (pēdējās 7 dienas)",
   "statsChart.revenue": "Ieņēmumi",
+  "statsChart.traded": "Ietirgots",
   "statsChart.orders": "Pasūtījumi",
   "statsChart.avgBasket": "Vid. grozs",
 

@@ -9,8 +9,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend,
 } from "recharts";
 import {
   ChartContainer,
@@ -20,7 +18,6 @@ import {
 } from "@/components/ui/chart";
 import { Card } from "@/components/ui/card";
 
-const GATAVOJAS = ORDER_STATUS.GATAVOJAS;
 const COMPLETED_STATUSES = [
   ORDER_STATUS.GATAVS,
   ORDER_STATUS.IZSAUKTS,
@@ -36,14 +33,6 @@ function getTotalCents(order: SharedOrder): number {
   if (c != null && typeof c === "number") return c;
   const legacy = (order as Record<string, unknown>).totalPrice;
   return typeof legacy === "number" && legacy >= 0 ? legacy : 0;
-}
-
-function getCompletedAt(order: SharedOrder): string | null {
-  const v = order.completedAt;
-  if (v && typeof v === "string") return v;
-  const o = order as Record<string, unknown>;
-  const legacy = o.completed_at ?? o.completedTime;
-  return typeof legacy === "string" ? legacy : null;
 }
 
 const WEEKDAY_LABELS: Record<number, string> = {
@@ -87,13 +76,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
 
     const dailyByHour: Record<number, { hour: string; gatavojas: number; pabeigti: number; revenue: number; orderCount: number }> = {};
     for (let h = 0; h < 24; h++) {
-      dailyByHour[h] = {
-        hour: `${h.toString().padStart(2, "0")}`,
-        gatavojas: 0,
-        pabeigti: 0,
-        revenue: 0,
-        orderCount: 0,
-      };
+      dailyByHour[h] = { hour: `${h.toString().padStart(2, "0")}`, gatavojas: 0, pabeigti: 0, revenue: 0, orderCount: 0 };
     }
 
     const weekStart = new Date(now);
@@ -117,68 +100,52 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
     const dayToIndex = new Map(weeklyArr.map((e, i) => [e.day, i]));
 
     let todayRev = 0;
+    let todayCount = 0;
     let weekRev = 0;
+    let weekCount = 0;
 
     for (const order of orders) {
       const ts = getOrderTimestamp(order);
       const created = new Date(ts);
       const totalCents = getTotalCents(order);
-      const completedAt = getCompletedAt(order);
 
       if (ts >= todayStart && ts < todayEnd) {
         const hour = created.getHours();
         dailyByHour[hour].orderCount++;
         dailyByHour[hour].revenue += totalCents;
-        if (order.status === GATAVOJAS) {
-          dailyByHour[hour].gatavojas++;
-        } else if (isCompleted(order.status)) {
+        if (isCompleted(order.status)) {
           dailyByHour[hour].pabeigti++;
+        } else {
+          dailyByHour[hour].gatavojas++;
         }
-      }
-
-      if (completedAt && isCompleted(order.status)) {
-        const completedDate = new Date(completedAt);
-        const completedDayStart = new Date(
-          completedDate.getFullYear(),
-          completedDate.getMonth(),
-          completedDate.getDate()
-        ).getTime();
-        if (completedDayStart >= todayStart && completedDayStart < todayEnd) {
-          todayRev += totalCents;
-        }
-        if (completedDayStart >= weekStartTs) {
-          weekRev += totalCents;
-        }
+        todayCount++;
+        todayRev += totalCents;
       }
 
       if (ts >= weekStartTs) {
         const dayStr = toLocalDateStr(created);
         const idx = dayToIndex.get(dayStr);
         if (idx != null) {
-          const entry = weeklyArr[idx];
-          entry.orderCount++;
-          entry.revenue += totalCents;
-          if (order.status === GATAVOJAS) {
-            entry.gatavojas++;
-          } else if (isCompleted(order.status)) {
-            entry.pabeigti++;
+          weeklyArr[idx].orderCount++;
+          weeklyArr[idx].revenue += totalCents;
+          if (isCompleted(order.status)) {
+            weeklyArr[idx].pabeigti++;
+          } else {
+            weeklyArr[idx].gatavojas++;
           }
         }
+        weekCount++;
+        weekRev += totalCents;
       }
     }
 
-    const dailyArr = Object.values(dailyByHour);
-
-    const todayOrderCount = dailyArr.reduce((s, h) => s + h.orderCount, 0);
-    const weekOrderCount = weeklyArr.reduce((s, d) => s + d.orderCount, 0);
-
     return {
-      dailyData: dailyArr,
+      dailyData: Object.values(dailyByHour),
       weeklyData: weeklyArr,
       todayRevenue: todayRev,
       weeklyRevenue: weekRev,
-      todayAvgBasket: todayOrderCount > 0 ? todayRev / todayOrderCount : 0,
-      weeklyAvgBasket: weekOrderCount > 0 ? weekRev / weekOrderCount : 0,
+      todayAvgBasket: todayCount > 0 ? todayRev / todayCount : 0,
+      weeklyAvgBasket: weekCount > 0 ? weekRev / weekCount : 0,
     };
   }, [orders]);
 
@@ -218,15 +185,18 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
             <ChartTooltip
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
-                const p = payload[0]?.payload;
-                const total = p?.orderCount ?? 0;
+                const p = (payload[0]?.payload ?? payload[1]?.payload) as { hour?: string; revenue?: number; orderCount?: number } | undefined;
+                const cnt = p?.orderCount ?? 0;
                 const rev = p?.revenue ?? 0;
-                const avg = total > 0 ? (rev / 100 / total).toFixed(2) : "0.00";
+                const avg = cnt > 0 ? (rev / 100 / cnt).toFixed(2) : "0.00";
                 return (
                   <div className="rounded-lg border border-border/50 bg-background px-3 py-2 shadow-lg">
                     <p className="font-medium mb-1">{p?.hour ?? ""}:00</p>
                     <p className="text-xs text-muted-foreground">
-                      {t("statsChart.orders")}: {total}
+                      {t("statsChart.orders")}: {cnt}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("statsChart.traded")}: €{(rev / 100).toFixed(2)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {t("statsChart.avgBasket")}: €{avg}
