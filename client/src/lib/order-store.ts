@@ -31,7 +31,7 @@ function mapApiOrder(o: Record<string, unknown>): SharedOrder {
     items: Array.isArray(o.items) ? o.items : [],
     pagerNumber: typeof o.pagerNumber === "number" ? o.pagerNumber : null,
     pagerCalled: o.pagerCalled === true,
-    totalPriceCents: typeof o.totalPriceCents === "number" ? o.totalPriceCents : null,
+    totalPriceCents: typeof o.totalPriceCents === "number" ? o.totalPriceCents : (typeof (o as any).total_price_cents === "number" ? (o as any).total_price_cents : null),
     createdAt: typeof o.createdAt === "string" ? o.createdAt : null,
     completedAt: typeof o.completedAt === "string" ? o.completedAt : null,
   };

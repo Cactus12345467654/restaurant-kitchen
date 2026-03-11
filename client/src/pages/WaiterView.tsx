@@ -683,6 +683,11 @@ export default function WaiterView() {
                                 {t("waiter.atdotsKlientam")}
                               </button>
                             </div>
+                            {(order.totalPriceCents ?? (order as any).total_price_cents) != null && (
+                              <p className="text-right text-sm font-semibold text-primary mt-2">
+                                €{(((order.totalPriceCents ?? (order as any).total_price_cents) ?? 0) / 100).toFixed(2)}
+                              </p>
+                            )}
                           </div>
                         );
                       })}
@@ -741,6 +746,11 @@ export default function WaiterView() {
                                 {t("waiter.atdotsKlientam")}
                               </button>
                             </div>
+                            {(order.totalPriceCents ?? (order as any).total_price_cents) != null && (
+                              <p className="text-right text-sm font-semibold text-primary mt-2">
+                                €{(((order.totalPriceCents ?? (order as any).total_price_cents) ?? 0) / 100).toFixed(2)}
+                              </p>
+                            )}
                           </div>
                         );
                       })}
