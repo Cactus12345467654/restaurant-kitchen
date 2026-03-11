@@ -46,6 +46,13 @@ export const menuItems = pgTable("menu_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const uploadedImages = pgTable("uploaded_images", {
+  id: serial("id").primaryKey(),
+  data: text("data").notNull(),
+  mimeType: text("mime_type").notNull().default("image/jpeg"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const modifierGroups = pgTable("modifier_groups", {
   id: serial("id").primaryKey(),
   locationId: integer("location_id").notNull().references(() => locations.id),

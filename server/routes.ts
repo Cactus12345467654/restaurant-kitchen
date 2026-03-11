@@ -4,8 +4,11 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { storage } from "./storage";
+import { db } from "./db";
 import { initNewLocationConfig } from "./location-config";
 import { api } from "@shared/routes";
+import { uploadedImages } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import passport from "passport";
 import { setupAuth, hashPassword } from "./auth";
@@ -100,7 +103,7 @@ export async function registerRoutes(
         next();
       });
     },
-    (req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       res.setHeader("Content-Type", "application/json");
       try {
         if (!req.file) {
@@ -109,9 +112,10 @@ export async function registerRoutes(
         const filePath = path.join(uploadsDir, req.file.filename);
         const fileBuffer = fs.readFileSync(filePath);
         const mime = req.file.mimetype || "image/jpeg";
-        const imageData = `data:${mime};base64,${fileBuffer.toString("base64")}`;
-        const url = "/uploads/" + req.file.filename;
-        res.status(200).json({ url, imageData });
+        const dataUrl = `data:${mime};base64,${fileBuffer.toString("base64")}`;
+        const [row] = await db.insert(uploadedImages).values({ data: dataUrl, mimeType: mime }).returning();
+        const url = `/api/images/${row.id}`;
+        res.status(200).json({ url });
         return;
       } catch (err: any) {
         return res.status(500).json({ message: err?.message || "Upload failed" });
@@ -121,19 +125,18 @@ export async function registerRoutes(
   app.use("/api/upload", uploadRouter);
   app.use("/api/upload/", uploadRouter);
 
-  app.get("/api/menu-items/:id/image", async (req: Request, res: Response) => {
+  app.get("/api/images/:id", async (req: Request, res: Response) => {
     try {
-      const item = await storage.getMenuItem(Number(req.params.id));
-      if (!item?.imageData) {
-        return res.status(404).json({ message: "No image" });
+      const [row] = await db.select().from(uploadedImages).where(eq(uploadedImages.id, Number(req.params.id)));
+      if (!row?.data) {
+        return res.status(404).json({ message: "Image not found" });
       }
-      const match = item.imageData.match(/^data:(.+);base64,(.+)$/);
+      const match = row.data.match(/^data:(.+);base64,(.+)$/);
       if (!match) {
         return res.status(404).json({ message: "Invalid image data" });
       }
-      const mime = match[1];
       const buffer = Buffer.from(match[2], "base64");
-      res.setHeader("Content-Type", mime);
+      res.setHeader("Content-Type", match[1]);
       res.setHeader("Cache-Control", "public, max-age=86400");
       return res.send(buffer);
     } catch {
@@ -404,10 +407,7 @@ export async function registerRoutes(
       const items = await storage.getMenuItems(locationId);
       const normalized = items.map((it: any) => {
         const { imageData: _drop, ...rest } = it;
-        const imageUrl = it.imageData
-          ? `/api/menu-items/${it.id}/image`
-          : (it.imageUrl ?? it.image_url ?? null);
-        return { ...rest, imageUrl };
+        return { ...rest, imageUrl: it.imageUrl ?? it.image_url ?? null };
       });
       return res.json(normalized);
     } catch (err: any) {
@@ -424,7 +424,7 @@ export async function registerRoutes(
       const input = api.menuItems.create.input.parse(req.body);
       const item = await storage.createMenuItem(input);
       const { imageData: _drop, ...rest } = item as any;
-      res.status(201).json({ ...rest, imageUrl: item.imageData ? `/api/menu-items/${item.id}/image` : item.imageUrl });
+      res.status(201).json(rest);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -438,7 +438,7 @@ export async function registerRoutes(
       const input = api.menuItems.update.input.parse(req.body);
       const item = await storage.updateMenuItem(Number(req.params.id), input);
       const { imageData: _drop, ...rest } = item as any;
-      res.status(200).json({ ...rest, imageUrl: item.imageData ? `/api/menu-items/${item.id}/image` : item.imageUrl });
+      res.status(200).json(rest);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
