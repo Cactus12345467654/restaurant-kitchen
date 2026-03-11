@@ -24,7 +24,7 @@ const transporter =
 
 export async function sendPasswordResetEmail(to: string, token: string) {
   const appBaseUrl =
-    process.env.APP_BASE_URL || "http://localhost:5173";
+    process.env.APP_BASE_URL || "http://localhost:5000";
 
   const resetUrl = `${appBaseUrl}/reset-password?token=${encodeURIComponent(
     token,

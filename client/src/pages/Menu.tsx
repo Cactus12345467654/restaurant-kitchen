@@ -1134,7 +1134,7 @@ export default function Menu() {
       priceStr: (item.price / 100).toFixed(2),
       category: item.category,
       isAvailable: item.isAvailable,
-      imageUrl: item.imageUrl ?? "",
+      imageUrl: item.imageUrl ?? item.image_url ?? "",
     });
     setIsDialogOpen(true);
     queryClient.invalidateQueries({ queryKey: ["menu-item-modifiers", item.id] });

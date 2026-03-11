@@ -378,7 +378,8 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid location ID" });
       }
       const items = await storage.getMenuItems(locationId);
-      return res.json(items);
+      const normalized = items.map((it: any) => ({ ...it, imageUrl: it.imageUrl ?? it.image_url }));
+      return res.json(normalized);
     } catch (err: any) {
       console.error("GET /api/locations/:locationId/menu-items error:", err);
       const message = err?.message?.includes("column") && err?.message?.includes("does not exist")
