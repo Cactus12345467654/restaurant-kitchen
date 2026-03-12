@@ -8,7 +8,8 @@ import {
   LogOut,
   Layers,
   ConciergeBell,
-  BarChart3
+  BarChart3,
+  Clock
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation, LanguageSwitcher } from "@/i18n";
@@ -63,6 +64,12 @@ export function AppSidebar() {
       title: t("nav.users"),
       icon: UsersIcon,
       href: "/users",
+      roles: ["super_admin", "location_admin", "manager"],
+    },
+    {
+      title: t("nav.timeTracking"),
+      icon: Clock,
+      href: "/time-tracking",
       roles: ["super_admin", "location_admin", "manager"],
     },
     {

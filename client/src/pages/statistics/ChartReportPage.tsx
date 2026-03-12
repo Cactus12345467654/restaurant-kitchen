@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import { useTranslation } from "@/i18n";
 import { useAllOrders } from "@/lib/order-store";
 import { ORDER_STATUS } from "@/lib/order-status";
@@ -17,6 +18,15 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const COMPLETED_STATUSES = [
   ORDER_STATUS.GATAVS,
@@ -65,20 +75,25 @@ const chartConfig = {
   },
 };
 
+function isSameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 export function ChartReportPage({ locationId }: { locationId?: number | null }) {
   const { t } = useTranslation();
   const orders = useAllOrders(locationId);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
 
   const { dailyData, weeklyData, todayRevenue, weeklyRevenue, todayAvgBasket, weeklyAvgBasket } = useMemo(() => {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+    const dayStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime();
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
 
     const dailyByHour: Record<number, { hour: string; gatavojas: number; pabeigti: number; revenue: number; orderCount: number }> = {};
     for (let h = 0; h < 24; h++) {
       dailyByHour[h] = { hour: `${h.toString().padStart(2, "0")}`, gatavojas: 0, pabeigti: 0, revenue: 0, orderCount: 0 };
     }
 
+    const now = new Date();
     const weekStart = new Date(now);
     weekStart.setDate(weekStart.getDate() - 6);
     weekStart.setHours(0, 0, 0, 0);
@@ -109,7 +124,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
       const created = new Date(ts);
       const totalCents = getTotalCents(order);
 
-      if (ts >= todayStart && ts < todayEnd) {
+      if (ts >= dayStart && ts < dayEnd) {
         const hour = created.getHours();
         dailyByHour[hour].orderCount++;
         dailyByHour[hour].revenue += totalCents;
@@ -147,7 +162,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
       todayAvgBasket: todayCount > 0 ? todayRev / todayCount : 0,
       weeklyAvgBasket: weekCount > 0 ? weekRev / weekCount : 0,
     };
-  }, [orders]);
+  }, [orders, selectedDate]);
 
   return (
     <div className="space-y-8">
@@ -157,16 +172,42 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
 
       {/* Daily chart */}
       <Card className="p-6 bg-card border-border/50 rounded-2xl">
-        <div className="flex flex-wrap items-baseline gap-x-6 mb-1">
-          <p className="text-lg font-semibold text-foreground">
-            {t("statsChart.todayRevenue")}: €{(todayRevenue / 100).toFixed(2)}
-          </p>
-          <p className="text-sm font-medium text-muted-foreground">
-            {t("statsChart.avgBasket")}: €{(todayAvgBasket / 100).toFixed(2)}
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-1">
+          <div className="flex flex-wrap items-baseline gap-x-6">
+            <p className="text-lg font-semibold text-foreground">
+              {isSameDay(selectedDate, new Date()) ? t("statsChart.todayRevenue") : t("statsChart.dayRevenue")}: €{(todayRevenue / 100).toFixed(2)}
+            </p>
+            <p className="text-sm font-medium text-muted-foreground">
+              {t("statsChart.avgBasket")}: €{(todayAvgBasket / 100).toFixed(2)}
+            </p>
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "gap-2 border-border/50",
+                  !isSameDay(selectedDate, new Date()) && "border-primary/50 text-primary"
+                )}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                {format(selectedDate, "dd.MM.yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-card border-border/50" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => d && setSelectedDate(d)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          {t("statsChart.dailyByHour")}
+          {isSameDay(selectedDate, new Date())
+            ? t("statsChart.dailyByHour")
+            : t("statsChart.dailyByHourDate").replace("{date}", format(selectedDate, "dd.MM.yyyy"))}
         </p>
         <ChartContainer config={chartConfig} className="h-[280px] w-full">
           <BarChart data={dailyData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>

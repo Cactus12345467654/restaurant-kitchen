@@ -23,6 +23,7 @@ import StatisticsLanding from "./pages/StatisticsLanding";
 import StatisticsView from "./pages/StatisticsView";
 import Waiter from "./pages/Waiter";
 import WaiterView from "./pages/WaiterView";
+import TimeTracking from "./pages/TimeTracking";
 
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
                 <Route path="/menu" component={Menu} />
                 <Route path="/modifiers" component={Modifiers} />
                 <Route path="/users" component={Users} />
+                <Route path="/time-tracking" component={TimeTracking} />
                 <Route path="/waiter" component={Waiter} />
                 <Route path="/kitchen" component={Kitchen} />
                 <Route path="/statistics/view" component={StatisticsView} />
