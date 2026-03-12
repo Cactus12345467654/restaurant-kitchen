@@ -20,6 +20,7 @@ const DEFAULT_TEMPLATE: LocationConfig = {
   categoryOrder: [],
   pagerEnabled: false,
   pagerCount: 16,
+  takeawayEnabled: true,
 };
 
 /**

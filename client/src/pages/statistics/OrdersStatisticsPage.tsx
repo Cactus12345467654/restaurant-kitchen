@@ -19,6 +19,8 @@ function filterOrders(
   return orders.filter((o) => {
     if (filters.orderNumber && !o.id.includes(filters.orderNumber)) return false;
     if (filters.status && o.status !== filters.status) return false;
+    if (filters.takeaway === "1" && !o.isTakeaway) return false;
+    if (filters.takeaway === "0" && o.isTakeaway) return false;
     if (filters.searchText.trim()) {
       const q = filters.searchText.toLowerCase().trim();
       const matchId = o.id.toLowerCase().includes(q);

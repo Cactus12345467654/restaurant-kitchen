@@ -24,6 +24,7 @@ import StatisticsView from "./pages/StatisticsView";
 import Waiter from "./pages/Waiter";
 import WaiterView from "./pages/WaiterView";
 import TimeTracking from "./pages/TimeTracking";
+import Info from "./pages/Info";
 
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/register" component={Register} />
                 <Route path="/forgot-password" component={ForgotPassword} />
                 <Route path="/reset-password" component={ResetPassword} />
+                <Route path="/info" component={Info} />
                 <Route path="/waiter/view" component={WaiterView} />
                 <Route path="/kitchen/view" component={KitchenView} />
                 <Route path="/locations" component={Locations} />

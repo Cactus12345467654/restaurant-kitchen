@@ -125,4 +125,7 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     console.log(`\n  ➜  Local:   ${url}\n`);
   });
-})();
+})().catch((err) => {
+  console.error("Server startup failed:", err);
+  process.exit(1);
+});

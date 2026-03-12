@@ -77,9 +77,9 @@ export interface IStorage {
   deleteModifierOption(id: number): Promise<void>;
 
   // Orders
-  createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null }): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; completedAt: string | null }>;
-  getOrdersByLocation(locationId: number, statuses?: string[]): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; completedAt: string | null }[]>;
-  getAllOrders(locationId?: number | null): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; completedAt: string | null }[]>;
+  createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null; isTakeaway?: boolean }): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; completedAt: string | null }>;
+  getOrdersByLocation(locationId: number, statuses?: string[]): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; completedAt: string | null }[]>;
+  getAllOrders(locationId?: number | null): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; completedAt: string | null }[]>;
   updateOrderStatus(orderId: number, status: string): Promise<void>;
   updateOrderPagerCalled(orderId: number, pagerCalled: boolean): Promise<void>;
 
@@ -195,12 +195,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Orders
-  async createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null }) {
+  async createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null; isTakeaway?: boolean }) {
     const [row] = await db.insert(orders).values({
       locationId: data.locationId,
       items: data.items,
       pagerNumber: data.pagerNumber ?? null,
       totalPriceCents: data.totalPriceCents ?? null,
+      isTakeaway: data.isTakeaway ?? false,
       status: "gatavojas",
     }).returning();
     const d = new Date(row.createdAt ?? new Date());
@@ -213,6 +214,7 @@ export class DatabaseStorage implements IStorage {
       pagerNumber: row.pagerNumber,
       pagerCalled: row.pagerCalled ?? false,
       totalPriceCents: row.totalPriceCents,
+      isTakeaway: row.isTakeaway ?? false,
       createdAt: row.createdAt?.toISOString() ?? null,
       completedAt: row.completedAt?.toISOString() ?? null,
     };
@@ -231,6 +233,7 @@ export class DatabaseStorage implements IStorage {
       pagerNumber: r.pagerNumber,
       pagerCalled: r.pagerCalled ?? false,
       totalPriceCents: r.totalPriceCents,
+      isTakeaway: r.isTakeaway ?? false,
       createdAt: r.createdAt?.toISOString() ?? null,
       completedAt: r.completedAt?.toISOString() ?? null,
     }));
@@ -248,6 +251,7 @@ export class DatabaseStorage implements IStorage {
       pagerNumber: r.pagerNumber,
       pagerCalled: r.pagerCalled ?? false,
       totalPriceCents: r.totalPriceCents,
+      isTakeaway: r.isTakeaway ?? false,
       createdAt: r.createdAt?.toISOString() ?? null,
       completedAt: r.completedAt?.toISOString() ?? null,
     }));

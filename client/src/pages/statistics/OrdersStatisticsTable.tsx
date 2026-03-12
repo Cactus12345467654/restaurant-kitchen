@@ -29,6 +29,7 @@ export interface OrderStatisticsRow {
   location: string;
   status: string;
   pagerNumber: string;
+  isTakeaway: boolean;
 }
 
 const FALLBACK = "-";
@@ -120,6 +121,7 @@ export function mapOrderToStatisticsRow(
     location: _locationName ?? FALLBACK,
     status: formatStatus(order.status),
     pagerNumber: order.pagerNumber != null ? String(order.pagerNumber) : FALLBACK,
+    isTakeaway: order.isTakeaway === true,
   };
 }
 
@@ -151,6 +153,7 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
               {t("statsOrders.colOrderNo")}
             </TableHead>
             <TableHead className="font-semibold text-xs px-2 py-1.5 h-8">{t("statsOrders.colPager")}</TableHead>
+            <TableHead className="font-semibold text-xs px-2 py-1.5 h-8">{t("statsOrders.colTakeaway")}</TableHead>
             <TableHead className="font-semibold text-xs px-2 py-1.5 h-8 whitespace-nowrap">{t("statsOrders.colPrice")}</TableHead>
             <TableHead className="font-semibold text-xs px-2 py-1.5 h-8">{t("statsOrders.colAccepted")}</TableHead>
             <TableHead className="font-semibold text-xs px-2 py-1.5 h-8">{t("statsOrders.colCompleted")}</TableHead>
@@ -168,7 +171,7 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={13}
+                colSpan={14}
                 className="py-12 text-center text-muted-foreground"
               >
                 {t("statsOrders.noOrders")}
@@ -184,6 +187,15 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
                   {row.orderNumber}
                 </TableCell>
                 <TableCell className="text-xs px-2 py-1.5">{row.pagerNumber}</TableCell>
+                <TableCell className="text-xs px-2 py-1.5">
+                  {row.isTakeaway ? (
+                    <span className="badge-takeaway inline-block text-xs font-semibold rounded px-1.5 py-0.5 bg-amber-500/20 text-amber-400">
+                      {t("kitchen.takeaway")}
+                    </span>
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
                 <TableCell className="text-xs px-2 py-1.5 font-medium whitespace-nowrap">{row.price}</TableCell>
                 <TableCell className="text-xs px-2 py-1.5">{row.acceptedAt}</TableCell>
                 <TableCell className="text-xs px-2 py-1.5">{row.completedAt}</TableCell>

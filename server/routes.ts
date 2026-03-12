@@ -675,11 +675,11 @@ export async function registerRoutes(
       if (!Number.isFinite(locationId)) {
         return res.status(400).json({ message: "Invalid location ID" });
       }
-      const { items, pagerNumber, totalPriceCents } = req.body as { items?: string[]; pagerNumber?: number | null; totalPriceCents?: number | null };
+      const { items, pagerNumber, totalPriceCents, isTakeaway } = req.body as { items?: string[]; pagerNumber?: number | null; totalPriceCents?: number | null; isTakeaway?: boolean };
       if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "items array required" });
       }
-      const order = await storage.createOrder({ locationId, items, pagerNumber, totalPriceCents });
+      const order = await storage.createOrder({ locationId, items, pagerNumber, totalPriceCents, isTakeaway });
       return res.status(201).json(order);
     } catch (err: any) {
       return res.status(500).json({ message: err?.message || "Failed to create order" });

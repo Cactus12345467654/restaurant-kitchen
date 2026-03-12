@@ -131,7 +131,14 @@ export default function KitchenView() {
                         className="bg-card/80 border-l-[3px] border-l-orange-500 rounded-lg px-3 py-2 shadow-sm shadow-black/10 min-w-0 shrink-0"
                       >
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-muted-foreground truncate">#{order.id}</span>
+                          <span className="text-sm font-medium text-muted-foreground truncate flex items-center gap-2">
+                            #{order.id}
+                            {order.isTakeaway && (
+                              <span className="badge-takeaway text-[20px] font-semibold bg-amber-500/20 text-amber-400 rounded px-2 py-1">
+                                {t("kitchen.takeaway")}
+                              </span>
+                            )}
+                          </span>
                           <span className="flex items-center gap-1.5 shrink-0">
                             {order.pagerNumber != null && order.pagerNumber >= 1 && order.pagerNumber <= 16 && (
                               <span className="text-[10px] text-primary font-medium">P{order.pagerNumber}</span>
@@ -151,9 +158,9 @@ export default function KitchenView() {
                               <li key={i} className="text-foreground flex items-start gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0 mt-1.5" />
                                 <span className="min-w-0">
-                                  <span className="text-xl font-semibold leading-snug block">{mainName}</span>
+                                  <span className="text-[36px] font-semibold leading-snug block">{mainName}</span>
                                   {modifiers && (
-                                    <span className="text-base font-medium text-muted-foreground block mt-0.5">
+                                    <span className="text-[28px] font-medium text-muted-foreground block mt-0.5">
                                       ({modifiers})
                                     </span>
                                   )}

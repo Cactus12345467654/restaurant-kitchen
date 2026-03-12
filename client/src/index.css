@@ -90,6 +90,14 @@
     --sidebar-ring: 262 83% 58%;
   }
 
+  /* Līdzi badge – dienas režīmā labāka kontrasta */
+  html[data-theme="light"] .badge-takeaway {
+    background-color: hsl(25 95% 45%);
+    color: white;
+    border: 2px solid hsl(25 95% 35%);
+    font-weight: 700;
+  }
+
   /* Biezākas kontūras dienas režīmā – labāka vizuāla nodalīšana (3px) */
   html[data-theme="light"] .border { border-width: 3px; }
   html[data-theme="light"] .border-b { border-bottom-width: 3px; }

@@ -100,6 +100,7 @@ export const orders = pgTable("orders", {
   pagerNumber: integer("pager_number"),
   pagerCalled: boolean("pager_called").default(false),
   totalPriceCents: integer("total_price_cents"),
+  isTakeaway: boolean("is_takeaway").default(false),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

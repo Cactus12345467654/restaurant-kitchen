@@ -24,6 +24,7 @@ export interface OrdersFiltersState {
   cookId: string;
   orderNumber: string;
   status: string;
+  takeaway: string;
   searchText: string;
 }
 
@@ -34,6 +35,7 @@ export const defaultFilters: OrdersFiltersState = {
   cookId: "",
   orderNumber: "",
   status: "",
+  takeaway: "",
   searchText: "",
 };
 
@@ -60,6 +62,7 @@ function loadFilters(): OrdersFiltersState {
       if (parsed.cookId != null) migrated.cookId = String(parsed.cookId);
       if (parsed.orderNumber != null) migrated.orderNumber = String(parsed.orderNumber);
       if (parsed.status != null) migrated.status = String(parsed.status);
+      if (parsed.takeaway != null) migrated.takeaway = String(parsed.takeaway);
       if (parsed.searchText != null) migrated.searchText = String(parsed.searchText);
       return { ...defaultFilters, ...migrated };
     }
@@ -218,6 +221,24 @@ export function OrdersStatisticsFilters({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">
+              {t("statsOrders.takeaway")}
+            </Label>
+            <Select
+              value={filters.takeaway || "all"}
+              onValueChange={(v) => update({ takeaway: v === "all" ? "" : v })}
+            >
+              <SelectTrigger className="h-9 bg-background/50">
+                <SelectValue placeholder={t("statsOrders.selectTakeaway")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("statsOrders.all")}</SelectItem>
+                <SelectItem value="1">{t("waiter.takeaway")}</SelectItem>
+                <SelectItem value="0">{t("waiter.dineIn")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
               {t("statsOrders.search")}
             </Label>
             <Input
@@ -254,6 +275,7 @@ function getClearedFilters(): OrdersFiltersState {
     ...defaultFilters,
     datetimeFrom: toISODateTime(todayStart),
     datetimeTo: toISODateTime(now),
+    takeaway: "",
   };
 }
 

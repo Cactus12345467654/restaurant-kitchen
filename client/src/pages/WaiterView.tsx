@@ -266,6 +266,7 @@ export default function WaiterView() {
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("order");
+  const [isTakeaway, setIsTakeaway] = useState(false);
   const [pagerMode, setPagerMode] = usePagerMode();
   const [selectedPager, setSelectedPager] = useState<number | null>(null);
   const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
@@ -314,7 +315,7 @@ export default function WaiterView() {
     });
     const pagerNum = pagerMode ? selectedPager : null;
     try {
-      await addOrder(locationId, items, pagerNum, orderTotal);
+      await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway);
       setOrderLines([]);
       setShowConfirm(false);
       setSelectedPager(null);
@@ -629,6 +630,32 @@ export default function WaiterView() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {orderLines.length > 0 && (
+              <div className="px-5 py-2 border-t border-border/30 shrink-0">
+                <p className="text-xs text-muted-foreground mb-2">{t("waiter.orderType")}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsTakeaway(false)}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                      !isTakeaway ? "bg-primary/20 text-primary border border-primary/40" : "bg-white/5 text-muted-foreground border border-transparent hover:bg-white/10"
+                    }`}
+                  >
+                    {t("waiter.dineIn")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsTakeaway(true)}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                      isTakeaway ? "bg-primary/20 text-primary border border-primary/40" : "bg-white/5 text-muted-foreground border border-transparent hover:bg-white/10"
+                    }`}
+                  >
+                    {t("waiter.takeaway")}
+                  </button>
+                </div>
               </div>
             )}
 

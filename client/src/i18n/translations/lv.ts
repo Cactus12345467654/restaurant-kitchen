@@ -22,6 +22,11 @@ export const lv = {
   "common.back": "Atpakaļ",
   "common.copyLink": "Kopēt saiti",
   "common.linkCopied": "Saite nokopēta",
+  "common.info": "Info",
+
+  // Info page
+  "info.title": "Sistēmas informācija",
+  "info.placeholder": "Saturs pievienots vēlāk.",
 
   // Navigation / Sidebar
   "nav.dashboard": "Pārskats",
@@ -276,6 +281,7 @@ export const lv = {
   "kitchen.markReady": "Atzīmēt gatavu",
   "kitchen.markReadyOptional": "Atzīmēt gatavu (neobligāti)",
   "kitchen.noOrders": "Nav gaidošu pasūtījumu",
+  "kitchen.takeaway": "Līdzi",
 
   // Waiter
   "waiter.selectLocation": "Izvēlies lokāciju",
@@ -307,6 +313,9 @@ export const lv = {
   "waiter.noPager": "Bez peidžera",
   "waiter.pagerBadge": "Peidžers {n}",
   "waiter.checkIn": "Check in",
+  "waiter.orderType": "Pasūtījuma veids",
+  "waiter.dineIn": "Uz vietas",
+  "waiter.takeaway": "Līdzi",
   "timeTrackingModal.title": "Darba laiks",
   "timeTrackingModal.codePlaceholder": "Kods...",
   "timeTrackingModal.start": "SĀKT",
@@ -407,6 +416,8 @@ export const lv = {
   "statsOrders.cook": "Pavārs",
   "statsOrders.orderNumber": "Pasūtījuma nr.",
   "statsOrders.status": "Statuss",
+  "statsOrders.takeaway": "Līdzi",
+  "statsOrders.selectTakeaway": "Visi / Līdzi / Uz vietas",
   "statsOrders.search": "Meklēt",
   "statsOrders.selectLocation": "Izvēlies lokāciju",
   "statsOrders.selectCook": "Izvēlies pavāru",
@@ -425,6 +436,7 @@ export const lv = {
   "statsOrders.noDataHint": "Izmēģiniet notīrīt filtrus vai pārbaudīt datuma diapazonu",
   "statsOrders.colOrderNo": "Pasūtījuma nr.",
   "statsOrders.colPager": "Peidžeris / nr.",
+  "statsOrders.colTakeaway": "Līdzi",
   "statsOrders.colAccepted": "Pieņemts",
   "statsOrders.colCompleted": "Pabeigts",
   "statsOrders.colCookingTime": "Gatavošanas laiks",

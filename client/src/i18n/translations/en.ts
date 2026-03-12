@@ -24,6 +24,11 @@ export const en: Record<TranslationKey, string> = {
   "common.back": "Back",
   "common.copyLink": "Copy link",
   "common.linkCopied": "Link copied",
+  "common.info": "Info",
+
+  // Info page
+  "info.title": "System information",
+  "info.placeholder": "Content to be added later.",
 
   // Navigation / Sidebar
   "nav.dashboard": "Dashboard",
@@ -278,6 +283,7 @@ export const en: Record<TranslationKey, string> = {
   "kitchen.markReady": "Mark as ready",
   "kitchen.markReadyOptional": "Mark ready (optional)",
   "kitchen.noOrders": "No orders waiting",
+  "kitchen.takeaway": "Takeaway",
 
   // Waiter
   "waiter.selectLocation": "Select Location",
@@ -309,6 +315,9 @@ export const en: Record<TranslationKey, string> = {
   "waiter.noPager": "No pager",
   "waiter.pagerBadge": "Pager {n}",
   "waiter.checkIn": "Check in",
+  "waiter.orderType": "Order type",
+  "waiter.dineIn": "Dine-in",
+  "waiter.takeaway": "Takeaway",
   "timeTrackingModal.title": "Work time",
   "timeTrackingModal.codePlaceholder": "Code...",
   "timeTrackingModal.start": "START",
@@ -409,6 +418,8 @@ export const en: Record<TranslationKey, string> = {
   "statsOrders.cook": "Cook",
   "statsOrders.orderNumber": "Order no.",
   "statsOrders.status": "Status",
+  "statsOrders.takeaway": "Takeaway",
+  "statsOrders.selectTakeaway": "All / Takeaway / Dine-in",
   "statsOrders.search": "Search",
   "statsOrders.selectLocation": "Select location",
   "statsOrders.selectCook": "Select cook",
@@ -427,6 +438,7 @@ export const en: Record<TranslationKey, string> = {
   "statsOrders.noDataHint": "Try clearing filters or check the date range",
   "statsOrders.colOrderNo": "Order no.",
   "statsOrders.colPager": "Pager / no.",
+  "statsOrders.colTakeaway": "Takeaway",
   "statsOrders.colAccepted": "Accepted",
   "statsOrders.colCompleted": "Completed",
   "statsOrders.colCookingTime": "Cooking time",

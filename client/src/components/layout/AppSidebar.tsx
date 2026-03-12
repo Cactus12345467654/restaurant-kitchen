@@ -12,7 +12,7 @@ import {
   Clock
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useTranslation, LanguageSwitcher } from "@/i18n";
+import { useTranslation } from "@/i18n";
 import {
   Sidebar,
   SidebarContent,
@@ -150,17 +150,14 @@ export function AppSidebar() {
             </span>
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              className="justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              onClick={() => logout()}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              {t("common.signOut")}
-            </Button>
-            <LanguageSwitcher />
-          </div>
+          <Button 
+            variant="ghost" 
+            className="justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            onClick={() => logout()}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            {t("common.signOut")}
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
