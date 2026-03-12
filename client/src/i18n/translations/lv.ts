@@ -122,6 +122,8 @@ export const lv = {
   "users.locationRequired": "Lokācija ir obligāta šai lomai",
   "users.atLeastOneRole": "Jāizvēlas vismaz viena loma",
   "users.passwordRequired": "Parole ir obligāta jauniem lietotājiem",
+  "users.timeTrackingPin": "Parole laika uzskaitei",
+  "users.timeTrackingPinHint": "4 ciparu kods laika uzskaites pieteikumam (viesmīļi un pavāri)",
 
   // Menu
   "menu.title": "Ēdienkarte",
@@ -240,7 +242,6 @@ export const lv = {
 
   // Time Tracking
   "timeTracking.subtitle": "Darbinieku darba laika uzskaite",
-  "timeTracking.placeholder": "Šeit tiks izveidota darba laika uzskaites tabula darbiniekiem.",
   "timeTracking.selectLocation": "Izvēlies lokāciju",
   "timeTracking.selectMonth": "Mēnesis",
   "timeTracking.selectYear": "Gads",
@@ -304,6 +305,17 @@ export const lv = {
   "waiter.selectPager": "Izvēlies peidžeru",
   "waiter.noPager": "Bez peidžera",
   "waiter.pagerBadge": "Peidžers {n}",
+  "waiter.checkIn": "Check in",
+  "timeTrackingModal.title": "Darba laiks",
+  "timeTrackingModal.codePlaceholder": "Kods...",
+  "timeTrackingModal.start": "SĀKT",
+  "timeTrackingModal.pause": "Pārtraukums",
+  "timeTrackingModal.end": "Darba dienas beigas",
+  "timeTrackingModal.resume": "Pārtraukums beidzies",
+  "timeTrackingModal.close": "AIZVĒRT",
+  "timeTrackingModal.startedTracking": "Iedarbinājuši laika uzskaiti",
+  "timeTrackingModal.noOneStarted": "Neviens vēl nav sācis",
+  "timeTrackingModal.authorizedSuccess": "Laika uzskaite sākta",
 
   // Auth
   "auth.welcomeBack": "Laipni lūgti atpakaļ",

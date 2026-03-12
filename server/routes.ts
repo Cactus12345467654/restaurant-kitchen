@@ -400,6 +400,10 @@ export async function registerRoutes(
       if (input.password) {
         input.password = await hashPassword(input.password as string);
       }
+      if ((input as any).timeTrackingPin !== undefined) {
+        const pin = (input as any).timeTrackingPin;
+        (input as any).timeTrackingPin = pin && String(pin).trim() ? await hashPassword(String(pin).trim()) : null;
+      }
       const user = await storage.updateUser(Number(req.params.id), input as any);
       res.status(200).json(user);
     } catch (err) {
@@ -411,6 +415,155 @@ export async function registerRoutes(
   });
 
   app.use("/api/users", usersRouter);
+
+  // Time tracking (no auth for verify/start - used from waiter view)
+  const timeTrackingTokenMap = new Map<string, { userId: number; locationId: number }>();
+  const timeTrackingSchema = z.object({ locationId: z.number(), pin: z.string().length(4, "Kodam jābūt 4 cipariem") });
+  const timeTrackingTokenSchema = z.object({ locationId: z.number(), token: z.string() });
+  app.post("/api/time-tracking/verify", async (req, res) => {
+    try {
+      const { locationId, pin } = timeTrackingSchema.parse(req.body);
+      const result = await storage.verifyTimeTrackingPin(locationId, pin);
+      if (!result) return res.status(401).json({ message: "Nederīgs kods vai lokācija" });
+      res.json(result);
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: e.errors[0]?.message ?? "Invalid input" });
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app.post("/api/time-tracking/start", async (req, res) => {
+    try {
+      const { locationId, pin } = timeTrackingSchema.parse(req.body);
+      const user = await storage.verifyTimeTrackingPin(locationId, pin);
+      if (!user) return res.status(401).json({ message: "Nederīgs kods vai lokācija" });
+      const active = await storage.getActiveTimeEntry(user.id, locationId);
+      const token = crypto.randomBytes(24).toString("hex");
+      timeTrackingTokenMap.set(token, { userId: user.id, locationId });
+      setTimeout(() => timeTrackingTokenMap.delete(token), 24 * 60 * 60 * 1000);
+      if (active) {
+        return res.json({ entryId: active.id, userId: user.id, username: user.username, token, isPaused: !!active.pausedAt });
+      }
+      const entry = await storage.createTimeEntry({ userId: user.id, locationId });
+      res.json({ entryId: entry.id, userId: user.id, username: user.username, token, isPaused: false });
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: e.errors[0]?.message ?? "Invalid input" });
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  const timeTrackingPauseSchema = z.union([
+    timeTrackingTokenSchema,
+    z.object({ locationId: z.number(), pin: z.string().length(4), userId: z.number() }),
+  ]);
+  const timeTrackingEndSchema = z.union([
+    timeTrackingTokenSchema,
+    z.object({ locationId: z.number(), pin: z.string().length(4), userId: z.number() }),
+  ]);
+  app.post("/api/time-tracking/pause", async (req, res) => {
+    try {
+      const body = timeTrackingPauseSchema.parse(req.body);
+      const locationId = body.locationId;
+      let userId: number;
+      if ("token" in body) {
+        const sess = timeTrackingTokenMap.get(body.token);
+        if (!sess || sess.locationId !== locationId) return res.status(401).json({ message: "Sesija beidzies" });
+        userId = sess.userId;
+      } else {
+        const user = await storage.verifyTimeTrackingPin(locationId, body.pin);
+        if (!user) return res.status(401).json({ message: "Nederīgs kods vai lokācija" });
+        if (user.id !== body.userId) return res.status(403).json({ message: "Kods neatbilst darbiniekam" });
+        userId = user.id;
+      }
+      const active = await storage.getActiveTimeEntry(userId, locationId);
+      if (!active) return res.status(400).json({ message: "Nav aktīvas sesijas" });
+      if (active.pausedAt) return res.status(400).json({ message: "Jau apturēts" });
+      await storage.pauseTimeEntry(active.id, userId);
+      res.json({ ok: true });
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: e.errors[0]?.message ?? "Invalid input" });
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  const timeTrackingResumeSchema = z.union([
+    timeTrackingTokenSchema,
+    timeTrackingSchema,
+    z.object({ locationId: z.number(), pin: z.string().length(4), userId: z.number() }),
+  ]);
+  app.post("/api/time-tracking/resume", async (req, res) => {
+    try {
+      const body = timeTrackingResumeSchema.parse(req.body);
+      const locationId = body.locationId;
+      let userId: number;
+      if ("token" in body) {
+        const sess = timeTrackingTokenMap.get(body.token);
+        if (!sess || sess.locationId !== locationId) return res.status(401).json({ message: "Sesija beidzies" });
+        userId = sess.userId;
+      } else {
+        const user = await storage.verifyTimeTrackingPin(locationId, body.pin);
+        if (!user) return res.status(401).json({ message: "Nederīgs kods vai lokācija" });
+        userId = "userId" in body ? body.userId : user.id;
+        if (userId !== user.id) return res.status(403).json({ message: "Kods neatbilst darbiniekam" });
+      }
+      const active = await storage.getActiveTimeEntry(userId, locationId);
+      if (!active) return res.status(400).json({ message: "Nav aktīvas sesijas" });
+      if (!active.pausedAt) return res.status(400).json({ message: "Nav apturēts" });
+      await storage.resumeTimeEntry(active.id, userId);
+      res.json({ ok: true });
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: e.errors[0]?.message ?? "Invalid input" });
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app.post("/api/time-tracking/end", async (req, res) => {
+    try {
+      const body = timeTrackingEndSchema.parse(req.body);
+      const locationId = body.locationId;
+      let userId: number;
+      let tokenToDelete: string | undefined;
+      if ("token" in body) {
+        const sess = timeTrackingTokenMap.get(body.token);
+        if (!sess || sess.locationId !== locationId) return res.status(401).json({ message: "Sesija beidzies" });
+        userId = sess.userId;
+        tokenToDelete = body.token;
+      } else {
+        const user = await storage.verifyTimeTrackingPin(locationId, body.pin);
+        if (!user) return res.status(401).json({ message: "Nederīgs kods vai lokācija" });
+        if (user.id !== body.userId) return res.status(403).json({ message: "Kods neatbilst darbiniekam" });
+        userId = user.id;
+      }
+      const active = await storage.getActiveTimeEntry(userId, locationId);
+      if (!active) return res.status(400).json({ message: "Nav aktīvas sesijas" });
+      await storage.endTimeEntry(active.id, userId);
+      if (tokenToDelete) timeTrackingTokenMap.delete(tokenToDelete);
+      res.json({ ok: true });
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: e.errors[0]?.message ?? "Invalid input" });
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app.get("/api/time-tracking/active", async (req, res) => {
+    try {
+      const locationId = Number(req.query.locationId);
+      if (!Number.isFinite(locationId)) return res.status(400).json({ message: "Invalid locationId" });
+      const entries = await storage.getActiveTimeEntriesForLocation(locationId);
+      res.json(entries);
+    } catch (e) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app.get("/api/time-tracking/entries", requireAuth, requireRole(["super_admin", "location_admin", "manager"]), async (req, res) => {
+    try {
+      const locationId = Number(req.query.locationId);
+      const year = Number(req.query.year);
+      const month = Number(req.query.month);
+      if (!Number.isFinite(locationId) || !Number.isFinite(year) || !Number.isFinite(month)) {
+        return res.status(400).json({ message: "Invalid params" });
+      }
+      const entries = await storage.getTimeEntries(locationId, year, month);
+      res.json(entries);
+    } catch (e) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
   // Menu Items
   app.get(api.menuItems.list.path, requireAuth, async (req, res) => {

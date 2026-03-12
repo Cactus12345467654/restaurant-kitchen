@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, or, isNull, inArray } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, gte, lt, desc } from "drizzle-orm";
 import {
   users,
   locations,
@@ -8,6 +8,7 @@ import {
   modifierOptions,
   menuItemModifierGroups,
   orders,
+  timeEntries,
   type User,
   type InsertUser,
   type Location,
@@ -23,6 +24,8 @@ import {
   type UpdateMenuItemRequest,
   type UpdateModifierGroupRequest,
   type UpdateModifierOptionRequest,
+  type TimeEntry,
+  type InsertTimeEntry,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -78,6 +81,16 @@ export interface IStorage {
   getAllOrders(locationId?: number | null): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; completedAt: string | null }[]>;
   updateOrderStatus(orderId: number, status: string): Promise<void>;
   updateOrderPagerCalled(orderId: number, pagerCalled: boolean): Promise<void>;
+
+  // Time tracking
+  verifyTimeTrackingPin(locationId: number, pin: string): Promise<{ id: number; username: string } | null>;
+  createTimeEntry(data: InsertTimeEntry): Promise<TimeEntry>;
+  getActiveTimeEntry(userId: number, locationId: number): Promise<TimeEntry | undefined>;
+  getActiveTimeEntriesForLocation(locationId: number): Promise<(TimeEntry & { username: string })[]>;
+  getTimeEntries(locationId: number, year: number, month: number): Promise<(TimeEntry & { username: string })[]>;
+  pauseTimeEntry(entryId: number, userId: number): Promise<void>;
+  resumeTimeEntry(entryId: number, userId: number): Promise<void>;
+  endTimeEntry(entryId: number, userId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -426,6 +439,105 @@ export class DatabaseStorage implements IStorage {
 
   async deleteModifierOption(id: number): Promise<void> {
     await db.delete(modifierOptions).where(eq(modifierOptions.id, id));
+  }
+
+  // Time tracking
+  async verifyTimeTrackingPin(locationId: number, pin: string): Promise<{ id: number; username: string } | null> {
+    const allUsers = await db.select().from(users).where(or(eq(users.locationId, locationId), isNull(users.locationId)));
+    const { comparePasswords } = await import("./auth");
+    for (const u of allUsers) {
+      if (!u.timeTrackingPin) continue;
+      const roles = Array.isArray(u.roles) ? u.roles : [(u as any).role];
+      if (!roles.includes("waiter") && !roles.includes("kitchen_staff")) continue;
+      if (!u.isActive) continue;
+      if (await comparePasswords(pin, u.timeTrackingPin)) {
+        return { id: u.id, username: u.username };
+      }
+    }
+    return null;
+  }
+
+  async createTimeEntry(data: InsertTimeEntry): Promise<TimeEntry> {
+    const [entry] = await db.insert(timeEntries).values(data).returning();
+    return entry;
+  }
+
+  async getActiveTimeEntry(userId: number, locationId: number): Promise<TimeEntry | undefined> {
+    const [entry] = await db
+      .select()
+      .from(timeEntries)
+      .where(and(eq(timeEntries.userId, userId), eq(timeEntries.locationId, locationId), isNull(timeEntries.endedAt)))
+      .orderBy(desc(timeEntries.startedAt))
+      .limit(1);
+    return entry;
+  }
+
+  async getActiveTimeEntriesForLocation(locationId: number): Promise<(TimeEntry & { username: string })[]> {
+    const rows = await db
+      .select({
+        id: timeEntries.id,
+        userId: timeEntries.userId,
+        locationId: timeEntries.locationId,
+        startedAt: timeEntries.startedAt,
+        endedAt: timeEntries.endedAt,
+        pausedAt: timeEntries.pausedAt,
+        totalPauseMinutes: timeEntries.totalPauseMinutes,
+        username: users.username,
+      })
+      .from(timeEntries)
+      .innerJoin(users, eq(timeEntries.userId, users.id))
+      .where(and(eq(timeEntries.locationId, locationId), isNull(timeEntries.endedAt)));
+    return rows as (TimeEntry & { username: string })[];
+  }
+
+  async getTimeEntries(locationId: number, year: number, month: number): Promise<(TimeEntry & { username: string })[]> {
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0, 23, 59, 59);
+    const rows = await db
+      .select({
+        id: timeEntries.id,
+        userId: timeEntries.userId,
+        locationId: timeEntries.locationId,
+        startedAt: timeEntries.startedAt,
+        endedAt: timeEntries.endedAt,
+        pausedAt: timeEntries.pausedAt,
+        totalPauseMinutes: timeEntries.totalPauseMinutes,
+        username: users.username,
+      })
+      .from(timeEntries)
+      .innerJoin(users, eq(timeEntries.userId, users.id))
+      .where(and(eq(timeEntries.locationId, locationId), gte(timeEntries.startedAt, start), lt(timeEntries.startedAt, new Date(year, month, 1))));
+    return rows as (TimeEntry & { username: string })[];
+  }
+
+  async pauseTimeEntry(entryId: number, userId: number): Promise<void> {
+    await db
+      .update(timeEntries)
+      .set({ pausedAt: new Date() })
+      .where(and(eq(timeEntries.id, entryId), eq(timeEntries.userId, userId)));
+  }
+
+  async resumeTimeEntry(entryId: number, userId: number): Promise<void> {
+    const [entry] = await db.select().from(timeEntries).where(eq(timeEntries.id, entryId));
+    if (!entry || entry.userId !== userId || !entry.pausedAt) return;
+    const pauseMins = Math.floor((Date.now() - new Date(entry.pausedAt).getTime()) / 60000);
+    await db
+      .update(timeEntries)
+      .set({ pausedAt: null, totalPauseMinutes: (entry.totalPauseMinutes ?? 0) + pauseMins })
+      .where(eq(timeEntries.id, entryId));
+  }
+
+  async endTimeEntry(entryId: number, userId: number): Promise<void> {
+    const [entry] = await db.select().from(timeEntries).where(eq(timeEntries.id, entryId));
+    if (!entry || entry.userId !== userId) return;
+    let totalPause = entry.totalPauseMinutes ?? 0;
+    if (entry.pausedAt) {
+      totalPause += Math.floor((Date.now() - new Date(entry.pausedAt).getTime()) / 60000);
+    }
+    await db
+      .update(timeEntries)
+      .set({ endedAt: new Date(), pausedAt: null, totalPauseMinutes: totalPause })
+      .where(eq(timeEntries.id, entryId));
   }
 }
 

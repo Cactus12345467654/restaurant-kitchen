@@ -124,6 +124,8 @@ export const en: Record<TranslationKey, string> = {
   "users.locationRequired": "Location is required for this role",
   "users.atLeastOneRole": "At least one role must be selected",
   "users.passwordRequired": "Password is required for new users",
+  "users.timeTrackingPin": "Time tracking password",
+  "users.timeTrackingPinHint": "4-digit code for time tracking check-in (waiters and chefs)",
 
   // Menu
   "menu.title": "Menu",
@@ -242,7 +244,6 @@ export const en: Record<TranslationKey, string> = {
 
   // Time Tracking
   "timeTracking.subtitle": "Employee work time tracking",
-  "timeTracking.placeholder": "A work time tracking table for employees will be created here.",
   "timeTracking.selectLocation": "Select location",
   "timeTracking.selectMonth": "Month",
   "timeTracking.selectYear": "Year",
@@ -306,6 +307,17 @@ export const en: Record<TranslationKey, string> = {
   "waiter.selectPager": "Select pager",
   "waiter.noPager": "No pager",
   "waiter.pagerBadge": "Pager {n}",
+  "waiter.checkIn": "Check in",
+  "timeTrackingModal.title": "Work time",
+  "timeTrackingModal.codePlaceholder": "Code...",
+  "timeTrackingModal.start": "START",
+  "timeTrackingModal.pause": "Break",
+  "timeTrackingModal.end": "End of day",
+  "timeTrackingModal.resume": "Break ended",
+  "timeTrackingModal.close": "CLOSE",
+  "timeTrackingModal.startedTracking": "Time tracking started by",
+  "timeTrackingModal.noOneStarted": "No one has started yet",
+  "timeTrackingModal.authorizedSuccess": "Time tracking started",
 
   // Auth
   "auth.welcomeBack": "Welcome back",

@@ -52,7 +52,8 @@ export default function Users() {
     password: "",
     roles: ["kitchen_staff"] as string[],
     locationId: "",
-    isActive: true
+    isActive: true,
+    timeTrackingPin: ""
   });
 
   const openCreate = () => {
@@ -64,7 +65,8 @@ export default function Users() {
       password: "", 
       roles: ["kitchen_staff"], 
       locationId: canSelectLocation ? "" : String(currentUser?.locationId ?? ""),
-      isActive: true 
+      isActive: true,
+      timeTrackingPin: ""
     });
     setIsDialogOpen(true);
   };
@@ -77,7 +79,8 @@ export default function Users() {
       password: "", // Leave blank unless changing
       roles: roles.length > 0 ? roles : ["kitchen_staff"], 
       locationId: userObj.locationId ? String(userObj.locationId) : "",
-      isActive: userObj.isActive 
+      isActive: userObj.isActive,
+      timeTrackingPin: ""
     });
     setIsDialogOpen(true);
   };
@@ -104,7 +107,11 @@ export default function Users() {
 
       if (formData.password) {
         payload.password = formData.password;
-      } else if (!editingId) {
+      }
+      if (editingId && formData.timeTrackingPin.trim()) {
+        payload.timeTrackingPin = formData.timeTrackingPin.trim();
+      }
+      if (!formData.password && !editingId) {
         toast({ title: t("users.validationError"), description: t("users.passwordRequired"), variant: "destructive" });
         return;
       }
@@ -246,7 +253,20 @@ export default function Users() {
                   className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
                 />
               </div>
-              
+              {editingId && (
+                <div className="space-y-2">
+                  <Label>{t("users.timeTrackingPin")}</Label>
+                  <Input 
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={formData.timeTrackingPin} 
+                    onChange={(e) => setFormData({...formData, timeTrackingPin: e.target.value.replace(/\D/g, "")})} 
+                    placeholder={t("users.timeTrackingPinHint")}
+                    className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t("users.role")}</Label>

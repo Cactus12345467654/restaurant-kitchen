@@ -1,10 +1,12 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMenuItems, useMenuItemModifiers } from "@/hooks/use-menu";
-import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Radio } from "lucide-react";
+import { useActiveTimeSessions } from "@/hooks/use-active-time-sessions";
+import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Radio, Clock } from "lucide-react";
 import { resolveImageUrl } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation, LanguageSwitcher } from "@/i18n";
+import { useToast } from "@/hooks/use-toast";
 import { ORDER_STATUS } from "@/lib/order-status";
 import {
   addOrder,
@@ -268,6 +270,15 @@ export default function WaiterView() {
   const handleImgError = useCallback((id: number) => {
     setBrokenImages((prev) => { const next = new Set(prev); next.add(id); return next; });
   }, []);
+  const [timeTrackingOpen, setTimeTrackingOpen] = useState(false);
+  const [timeTrackingCode, setTimeTrackingCode] = useState("");
+  const [timeTrackingLoading, setTimeTrackingLoading] = useState(false);
+
+  const { data: activeSessions = [], refetch: refetchActiveSessions } = useActiveTimeSessions(locationId);
+
+  useEffect(() => {
+    if (timeTrackingOpen && locationId) refetchActiveSessions();
+  }, [timeTrackingOpen, locationId]);
 
   const gatavojasOrders = useOrders(locationId, ORDER_STATUS.GATAVOJAS);
   const gatavsOrders = useOrders(locationId, ORDER_STATUS.GATAVS);
@@ -445,6 +456,20 @@ export default function WaiterView() {
             {selectedCategory ?? t("waiter.title")}
           </h1>
           <div className="ml-auto shrink-0 flex items-center gap-3">
+            <button
+              onClick={() => setTimeTrackingOpen(true)}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                activeSessions.length > 0 ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "border-border/50 bg-white/5 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Clock className="h-4 w-4" />
+              {t("waiter.checkIn")}
+              {activeSessions.length > 0 && (
+                <span className="text-xs font-semibold">
+                  ({activeSessions.map((s) => getInitials(s.username)).join(", ")})
+                </span>
+              )}
+            </button>
             <button
               onClick={() => setPagerMode(!pagerMode)}
               className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -826,6 +851,299 @@ export default function WaiterView() {
       {selectedItem && (
         <ModifierModal item={selectedItem} onClose={() => setSelectedItem(null)} onAdd={handleAddToOrder} />
       )}
+
+      {timeTrackingOpen && locationId && (
+        <TimeTrackingModal
+          locationId={locationId}
+          activeSessions={activeSessions}
+          code={timeTrackingCode}
+          setCode={setTimeTrackingCode}
+          loading={timeTrackingLoading}
+          setLoading={setTimeTrackingLoading}
+          onClose={() => setTimeTrackingOpen(false)}
+          onSessionChange={refetchActiveSessions}
+          t={t}
+        />
+      )}
+
+    </div>
+  );
+}
+
+function formatDisplayName(username: string): string {
+  const part = username.split("@")[0] || username;
+  return part.replace(/\./g, " ").split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
+function getInitials(username: string): string {
+  const part = (username.split("@")[0] || username).replace(/\./g, " ");
+  const letters = part.split(/\s+/).map((w) => w.charAt(0).toUpperCase()).filter(Boolean);
+  return letters.length > 0 ? letters.join("") : "?";
+}
+
+interface ActiveSessionRow {
+  id: number;
+  userId: number;
+  username: string;
+  pausedAt: string | null;
+  startedAt?: string;
+  totalPauseMinutes?: number;
+}
+
+function formatElapsed(startedAt: string, pausedAt: string | null, totalPauseMinutes: number): string {
+  const start = new Date(startedAt).getTime();
+  const end = pausedAt ? new Date(pausedAt).getTime() : Date.now();
+  const pauseMs = (totalPauseMinutes || 0) * 60 * 1000;
+  const elapsedMs = Math.max(0, end - start - pauseMs);
+  const totalMins = Math.floor(elapsedMs / 60000);
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+}
+
+function SessionTimer({ startedAt, pausedAt, totalPauseMinutes }: { startedAt: string; pausedAt: string | null; totalPauseMinutes: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (pausedAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [pausedAt]);
+  const display = pausedAt ? formatElapsed(startedAt, pausedAt, totalPauseMinutes) : formatElapsed(startedAt, null, totalPauseMinutes || 0);
+  return <span className="font-mono text-sm tabular-nums text-muted-foreground">{display}</span>;
+}
+
+function TimeTrackingModal({
+  locationId,
+  activeSessions,
+  code,
+  setCode,
+  loading,
+  setLoading,
+  onClose,
+  onSessionChange,
+  t,
+}: {
+  locationId: number;
+  activeSessions: ActiveSessionRow[];
+  code: string;
+  setCode: (s: string) => void;
+  loading: boolean;
+  setLoading: (b: boolean) => void;
+  onClose: () => void;
+  onSessionChange?: () => void;
+  t: (k: string) => string;
+}) {
+  const { toast } = useToast();
+  const [verifiedUserId, setVerifiedUserId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (code.length !== 4) {
+      setVerifiedUserId(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/time-tracking/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locationId, pin: code }),
+      credentials: "include",
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setVerifiedUserId(data?.id ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setVerifiedUserId(null);
+      });
+    return () => { cancelled = true; };
+  }, [code, locationId]);
+
+  const doStart = async () => {
+    if (code.length !== 4) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/time-tracking/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId, pin: code }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Kļūda");
+      setCode("");
+      onSessionChange?.();
+      toast({ title: t("timeTrackingModal.authorizedSuccess"), description: formatDisplayName(data.username) });
+    } catch (e: any) {
+      toast({ title: t("common.error"), description: e.message || t("common.error"), variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+  const doPauseForUser = async (row: ActiveSessionRow) => {
+    if (verifiedUserId !== row.userId || code.length !== 4) {
+      toast({ title: t("common.error"), description: "Ievadiet darbinieka kodu", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/time-tracking/pause", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId, pin: code, userId: row.userId }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Kļūda");
+      setCode("");
+      onSessionChange?.();
+    } catch (e: any) {
+      toast({ title: t("common.error"), description: e.message || t("common.error"), variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+  const doResumeForUser = async (row: ActiveSessionRow) => {
+    if (verifiedUserId !== row.userId || code.length !== 4) {
+      toast({ title: t("common.error"), description: "Ievadiet darbinieka kodu", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/time-tracking/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId, pin: code, userId: row.userId }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Kļūda");
+      setCode("");
+      onSessionChange?.();
+    } catch (e: any) {
+      toast({ title: t("common.error"), description: e.message || t("common.error"), variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+  const doEndForUser = async (row: ActiveSessionRow) => {
+    if (verifiedUserId !== row.userId || code.length !== 4) {
+      toast({ title: t("common.error"), description: "Ievadiet darbinieka kodu", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/time-tracking/end", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId, pin: code, userId: row.userId }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Kļūda");
+      setCode("");
+      onSessionChange?.();
+    } catch (e: any) {
+      toast({ title: t("common.error"), description: e.message || t("common.error"), variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="rounded-2xl w-full max-w-xl p-6 shadow-xl bg-card border border-border/50 max-h-[90vh] flex flex-col min-w-[380px]">
+        <div className="flex items-center justify-between mb-4 shrink-0">
+          <h2 className="text-xl font-display font-bold">{t("timeTrackingModal.title")}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto space-y-5">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-foreground">{t("timeTrackingModal.startedTracking")}</p>
+            {activeSessions.length > 0 ? (
+              activeSessions.map((row) => {
+                const isPaused = !!row.pausedAt;
+                const canAct = verifiedUserId === row.userId && code.length === 4;
+                const name = formatDisplayName(row.username);
+                return (
+                  <div
+                    key={row.id}
+                    className="flex items-center gap-2 rounded-lg border border-border/50 bg-white/5 px-3 py-2.5"
+                  >
+                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                      <span className="font-medium truncate">{name}</span>
+                      {row.startedAt && (
+                        <SessionTimer
+                          startedAt={row.startedAt}
+                          pausedAt={row.pausedAt}
+                          totalPauseMinutes={row.totalPauseMinutes ?? 0}
+                        />
+                      )}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      {isPaused ? (
+                        <button
+                          onClick={() => doResumeForUser(row)}
+                          disabled={loading || !canAct}
+                          className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {t("timeTrackingModal.resume")}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => doPauseForUser(row)}
+                          disabled={loading || !canAct}
+                          className="px-3 py-1.5 rounded-lg border border-amber-500/50 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-500/25 disabled:opacity-50"
+                        >
+                          {t("timeTrackingModal.pause")}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => doEndForUser(row)}
+                        disabled={loading || !canAct}
+                        className="px-3 py-1.5 rounded-lg border border-border/50 bg-white/5 text-sm font-medium hover:bg-white/10 disabled:opacity-50"
+                      >
+                        {t("timeTrackingModal.end")}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-muted-foreground py-3">{t("timeTrackingModal.noOneStarted")}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder={t("timeTrackingModal.codePlaceholder")}
+                className="flex-1 px-3 py-2 rounded-lg border border-border/50 bg-black/20"
+              />
+              <button
+                onClick={doStart}
+                disabled={loading || code.length !== 4}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("timeTrackingModal.start")}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-border/50 shrink-0">
+          <button
+            onClick={onClose}
+            className="w-full py-2 rounded-lg border border-border/50 bg-white/5 text-sm font-medium hover:bg-white/10"
+          >
+            {t("timeTrackingModal.close")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

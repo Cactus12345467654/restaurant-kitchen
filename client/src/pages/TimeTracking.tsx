@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth, hasRole } from "@/hooks/use-auth";
 import { useUsers } from "@/hooks/use-users";
 import { useLocations } from "@/hooks/use-locations";
+import { useTimeEntries } from "@/hooks/use-time-entries";
 import { useTranslation } from "@/i18n";
 import { getDaysInMonth } from "date-fns";
 import { Loader2 } from "lucide-react";
@@ -33,12 +34,16 @@ function formatDisplayName(username: string): string {
     .join(" ");
 }
 
+function minutesToHHMM(m: number): string {
+  if (m <= 0) return "—";
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${h}:${String(min).padStart(2, "0")}`;
+}
+
 export default function TimeTracking() {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const { data: users = [], isLoading: usersLoading } = useUsers();
-  const { data: locations = [] } = useLocations();
-
   const isSuperAdmin = hasRole(user, "super_admin");
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
     isSuperAdmin ? null : (user?.locationId ?? null)
@@ -46,6 +51,10 @@ export default function TimeTracking() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
+
+  const { data: users = [], isLoading: usersLoading } = useUsers();
+  const { data: locations = [] } = useLocations();
+  const { data: entries = [] } = useTimeEntries(selectedLocationId, year, month);
 
   useEffect(() => {
     if (isSuperAdmin && locations.length > 0 && selectedLocationId == null) {
@@ -69,6 +78,25 @@ export default function TimeTracking() {
     const dow = d.getDay();
     return dow === 0 || dow === 6;
   };
+
+  const { byUserDay, byUserTotal, byDayTotal } = useMemo(() => {
+    const byUserDay: Record<number, Record<number, number>> = {};
+    const byUserTotal: Record<number, number> = {};
+    const byDayTotal: Record<number, number> = {};
+    for (const e of entries) {
+      const start = new Date(e.startedAt);
+      const end = e.endedAt ? new Date(e.endedAt) : new Date();
+      const totalMins = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 60000) - (e.totalPauseMinutes || 0));
+      const day = start.getDate();
+      if (start.getMonth() === month - 1 && start.getFullYear() === year) {
+        byUserDay[e.userId] = byUserDay[e.userId] || {};
+        byUserDay[e.userId][day] = (byUserDay[e.userId][day] || 0) + totalMins;
+        byUserTotal[e.userId] = (byUserTotal[e.userId] || 0) + totalMins;
+        byDayTotal[day] = (byDayTotal[day] || 0) + totalMins;
+      }
+    }
+    return { byUserDay, byUserTotal, byDayTotal };
+  }, [entries, year, month]);
 
   if (!selectedLocationId && !isSuperAdmin) {
     return (
@@ -191,18 +219,21 @@ export default function TimeTracking() {
                       <TableCell className="px-2 py-1.5 font-medium text-foreground sticky left-0 bg-card z-10">
                         {formatDisplayName(emp.username)}
                       </TableCell>
-                      {days.map((day) => (
-                        <TableCell
-                          key={day}
-                          className={`px-1.5 py-1.5 text-center text-muted-foreground ${
-                            isWeekend(day) ? "bg-red-500/5" : ""
-                          }`}
-                        >
-                          —
-                        </TableCell>
-                      ))}
+                      {days.map((day) => {
+                        const mins = byUserDay[emp.id]?.[day] ?? 0;
+                        return (
+                          <TableCell
+                            key={day}
+                            className={`px-1.5 py-1.5 text-center text-muted-foreground ${
+                              isWeekend(day) ? "bg-red-500/5" : ""
+                            }`}
+                          >
+                            {minutesToHHMM(mins)}
+                          </TableCell>
+                        );
+                      })}
                       <TableCell className="px-1.5 py-1.5 text-right font-medium bg-muted/20">
-                        —
+                        {minutesToHHMM(byUserTotal[emp.id] ?? 0)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -219,11 +250,11 @@ export default function TimeTracking() {
                           isWeekend(day) ? "bg-red-500/10" : ""
                         }`}
                       >
-                        —
+                        {minutesToHHMM(byDayTotal[day] ?? 0)}
                       </TableCell>
                     ))}
                     <TableCell className="px-1.5 py-1.5 text-right font-semibold">
-                      —
+                      {minutesToHHMM(Object.values(byUserTotal).reduce((a, b) => a + b, 0))}
                     </TableCell>
                   </TableRow>
                 </TableFooter>

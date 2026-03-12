@@ -30,7 +30,18 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").default(true),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpires: timestamp("password_reset_expires"),
+  timeTrackingPin: text("time_tracking_pin"), // Hashed 4-digit code for time tracking check-in
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const timeEntries = pgTable("time_entries", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  locationId: integer("location_id").notNull().references(() => locations.id),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  pausedAt: timestamp("paused_at", { withTimezone: true }),
+  totalPauseMinutes: integer("total_pause_minutes").notNull().default(0),
 });
 
 export const menuItems = pgTable("menu_items", {
@@ -102,11 +113,17 @@ export const menuItemModifierGroups = pgTable(
   (t) => [primaryKey({ columns: [t.menuItemId, t.modifierGroupId] })]
 );
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   location: one(locations, {
     fields: [users.locationId],
     references: [locations.id],
   }),
+  timeEntries: many(timeEntries),
+}));
+
+export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
+  user: one(users, { fields: [timeEntries.userId], references: [users.id] }),
+  location: one(locations, { fields: [timeEntries.locationId], references: [locations.id] }),
 }));
 
 export const modifierGroupsRelations = relations(modifierGroups, ({ one, many }) => ({
@@ -166,7 +183,11 @@ export type CreateUserRequest = InsertUser;
 export type UpdateUserRequest = Partial<InsertUser> & {
   passwordResetToken?: string | null;
   passwordResetExpires?: Date | null;
+  timeTrackingPin?: string | null;
 };
+
+export type TimeEntry = typeof timeEntries.$inferSelect;
+export type InsertTimeEntry = typeof timeEntries.$inferInsert;
 
 export type CreateMenuItemRequest = InsertMenuItem;
 export type UpdateMenuItemRequest = Partial<InsertMenuItem>;
