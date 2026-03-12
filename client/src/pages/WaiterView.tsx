@@ -19,6 +19,11 @@ import {
   getUsedPagerNumbers,
   type SharedOrder,
 } from "@/lib/order-store";
+import {
+  buildReceiptData,
+  printKitchenReceipt,
+  isCactusFoodTruck,
+} from "@/lib/kitchen-receipt-print";
 
 interface OrderLineModifier {
   groupName: string;
@@ -316,6 +321,10 @@ export default function WaiterView() {
     const pagerNum = pagerMode ? selectedPager : null;
     try {
       await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway);
+      if (isCactusFoodTruck(currentLocation?.name)) {
+        const receiptData = buildReceiptData(locationId, orderLines, orderTotal);
+        printKitchenReceipt(receiptData);
+      }
       setOrderLines([]);
       setShowConfirm(false);
       setSelectedPager(null);
