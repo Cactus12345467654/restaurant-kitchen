@@ -19,6 +19,8 @@ export interface SharedOrder {
   totalPriceCents?: number | null;
   /** True when order is for takeaway (līdzi), false for dine-in (uz vietas). */
   isTakeaway?: boolean;
+  /** Čeka numurs (parādās UI un čekā Cactus Food truck). */
+  receiptOrderNumber?: number | null;
   /** ISO timestamp when order was created (for statistics). */
   createdAt?: string | null;
   /** ISO timestamp when order was marked ready (GATAVS) or delivered (ATDOTS_KLIENTAM). */
@@ -35,6 +37,7 @@ function mapApiOrder(o: Record<string, unknown>): SharedOrder {
     pagerCalled: o.pagerCalled === true,
     totalPriceCents: typeof o.totalPriceCents === "number" ? o.totalPriceCents : (typeof (o as any).total_price_cents === "number" ? (o as any).total_price_cents : null),
     isTakeaway: o.isTakeaway === true || (o as any).is_takeaway === true,
+    receiptOrderNumber: typeof o.receiptOrderNumber === "number" ? o.receiptOrderNumber : (typeof (o as any).receipt_order_number === "number" ? (o as any).receipt_order_number : null),
     createdAt: typeof o.createdAt === "string" ? o.createdAt : null,
     completedAt: typeof o.completedAt === "string" ? o.completedAt : null,
   };
@@ -45,12 +48,13 @@ export async function addOrder(
   items: string[],
   pagerNumber?: number | null,
   totalPriceCents?: number | null,
-  isTakeaway?: boolean
+  isTakeaway?: boolean,
+  receiptOrderNumber?: number | null
 ): Promise<SharedOrder> {
   const res = await fetch(`/api/locations/${locationId}/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items, pagerNumber: pagerNumber ?? null, totalPriceCents: totalPriceCents ?? null, isTakeaway: isTakeaway ?? false }),
+    body: JSON.stringify({ items, pagerNumber: pagerNumber ?? null, totalPriceCents: totalPriceCents ?? null, isTakeaway: isTakeaway ?? false, receiptOrderNumber: receiptOrderNumber ?? null }),
     credentials: "include",
   });
   if (!res.ok) {

@@ -320,10 +320,12 @@ export default function WaiterView() {
     });
     const pagerNum = pagerMode ? selectedPager : null;
     try {
-      await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway);
       if (isCactusFoodTruck(currentLocation?.name)) {
         const receiptData = buildReceiptData(locationId, orderLines, orderTotal);
+        await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway, receiptData.orderNumber);
         printKitchenReceipt(receiptData);
+      } else {
+        await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway);
       }
       setOrderLines([]);
       setShowConfirm(false);
@@ -716,7 +718,7 @@ export default function WaiterView() {
                         return (
                           <div key={order.id} className="px-5 py-4 space-y-3">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-medium text-muted-foreground truncate">#{order.id}</span>
+                              <span className="text-sm font-medium text-muted-foreground truncate">#{order.receiptOrderNumber ?? order.id}</span>
                               <div className="flex items-center gap-2 shrink-0">
                                 {hasPager && (
                                   <span className="text-xl font-semibold bg-primary/20 text-primary rounded-full px-2.5 py-0.5 min-w-[2rem] text-center">
@@ -784,7 +786,7 @@ export default function WaiterView() {
                         return (
                           <div key={order.id} className="px-5 py-4 space-y-3">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-medium text-muted-foreground truncate">#{order.id}</span>
+                              <span className="text-sm font-medium text-muted-foreground truncate">#{order.receiptOrderNumber ?? order.id}</span>
                               <div className="flex items-center gap-2 shrink-0">
                                 {hasPager && (
                                   <span className="text-xl font-semibold bg-primary/20 text-primary rounded-full px-2.5 py-0.5 min-w-[2rem] text-center">

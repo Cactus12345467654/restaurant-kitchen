@@ -89,9 +89,17 @@ export function buildReceiptData(
   };
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function buildReceiptHtml(data: ReceiptData): string {
   const lines = data.productLines
-    .map((l) => `${l.name} x${l.qty}  €${(l.priceCents / 100).toFixed(2)}`)
+    .map((l) => `${escapeHtml(l.name)} x${l.qty}  €${(l.priceCents / 100).toFixed(2)}`)
     .join("\n");
   const total = `€${(data.totalCents / 100).toFixed(2)}`;
   const paid = `€${(data.paidCents / 100).toFixed(2)}`;
@@ -103,19 +111,35 @@ function buildReceiptHtml(data: ReceiptData): string {
   <meta charset="utf-8">
   <title>Virtuves čeks #${data.orderNumber}</title>
   <style>
-    body { font-family: monospace; font-size: 12px; padding: 8px; max-width: 58mm; margin: 0; }
-    h2 { margin: 0 0 8px 0; font-size: 14px; }
-    pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
-    .total { font-weight: bold; margin-top: 8px; }
-    .time { margin-top: 4px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: monospace, sans-serif;
+      font-size: 11px;
+      width: 80mm;
+      margin: 0;
+      padding: 0;
+      background: white;
+    }
+    .receipt { width: 80mm; padding: 0 3mm; text-align: center; }
+    .order-number { font-size: 36px; font-weight: bold; text-align: center; padding-bottom: 1mm; line-height: 1.1; letter-spacing: 2px; }
+    .items { font-size: 11px; line-height: 1.2; padding-bottom: 1mm; white-space: pre-wrap; word-break: break-word; text-align: left; }
+    .total { font-weight: bold; padding-top: 0.5mm; }
+    .paid { padding-top: 0.5mm; }
+    .time { padding-top: 1mm; font-size: 10px; }
+    @media print {
+      @page { size: 80mm auto; margin: 0; }
+      html, body { width: 80mm !important; max-width: 80mm !important; margin: 0 !important; padding: 0 !important; background: white !important; }
+    }
   </style>
 </head>
 <body>
-  <h2>Pasūtījums #${data.orderNumber}</h2>
-  <pre>${lines}</pre>
-  <div class="total">Kopā: ${total}</div>
-  <div>Samaksāts: ${paid}</div>
-  <div class="time">Laiks: ${data.time}</div>
+  <div class="receipt">
+    <div class="order-number">#${data.orderNumber}</div>
+    <div class="items">${lines}</div>
+    <div class="total">Kopā: ${total}</div>
+    <div class="paid">Samaksāts: ${paid}</div>
+    <div class="time">Laiks: ${data.time}</div>
+  </div>
 </body>
 </html>`;
 }

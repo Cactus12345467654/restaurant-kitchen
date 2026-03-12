@@ -132,7 +132,7 @@ export default function KitchenView() {
                       >
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-sm font-medium text-muted-foreground truncate flex items-center gap-2">
-                            #{order.id}
+                            #{order.receiptOrderNumber ?? order.id}
                             {order.isTakeaway && (
                               <span className="badge-takeaway text-[20px] font-semibold bg-amber-500/20 text-amber-400 rounded px-2 py-1">
                                 {t("kitchen.takeaway")}

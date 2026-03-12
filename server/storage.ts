@@ -77,9 +77,9 @@ export interface IStorage {
   deleteModifierOption(id: number): Promise<void>;
 
   // Orders
-  createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null; isTakeaway?: boolean }): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; completedAt: string | null }>;
-  getOrdersByLocation(locationId: number, statuses?: string[]): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; completedAt: string | null }[]>;
-  getAllOrders(locationId?: number | null): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; completedAt: string | null }[]>;
+  createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null; isTakeaway?: boolean; receiptOrderNumber?: number | null }): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; receiptOrderNumber: number | null; completedAt: string | null }>;
+  getOrdersByLocation(locationId: number, statuses?: string[]): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; receiptOrderNumber: number | null; completedAt: string | null }[]>;
+  getAllOrders(locationId?: number | null): Promise<{ id: string; time: string; status: string; items: string[]; pagerNumber: number | null; pagerCalled: boolean; totalPriceCents: number | null; isTakeaway: boolean; receiptOrderNumber: number | null; completedAt: string | null }[]>;
   updateOrderStatus(orderId: number, status: string): Promise<void>;
   updateOrderPagerCalled(orderId: number, pagerCalled: boolean): Promise<void>;
 
@@ -195,13 +195,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Orders
-  async createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null; isTakeaway?: boolean }) {
+  async createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null; isTakeaway?: boolean; receiptOrderNumber?: number | null }) {
     const [row] = await db.insert(orders).values({
       locationId: data.locationId,
       items: data.items,
       pagerNumber: data.pagerNumber ?? null,
       totalPriceCents: data.totalPriceCents ?? null,
       isTakeaway: data.isTakeaway ?? false,
+      receiptOrderNumber: data.receiptOrderNumber ?? null,
       status: "gatavojas",
     }).returning();
     const d = new Date(row.createdAt ?? new Date());
@@ -215,6 +216,7 @@ export class DatabaseStorage implements IStorage {
       pagerCalled: row.pagerCalled ?? false,
       totalPriceCents: row.totalPriceCents,
       isTakeaway: row.isTakeaway ?? false,
+      receiptOrderNumber: row.receiptOrderNumber ?? null,
       createdAt: row.createdAt?.toISOString() ?? null,
       completedAt: row.completedAt?.toISOString() ?? null,
     };
@@ -234,6 +236,7 @@ export class DatabaseStorage implements IStorage {
       pagerCalled: r.pagerCalled ?? false,
       totalPriceCents: r.totalPriceCents,
       isTakeaway: r.isTakeaway ?? false,
+      receiptOrderNumber: r.receiptOrderNumber ?? null,
       createdAt: r.createdAt?.toISOString() ?? null,
       completedAt: r.completedAt?.toISOString() ?? null,
     }));
@@ -252,6 +255,7 @@ export class DatabaseStorage implements IStorage {
       pagerCalled: r.pagerCalled ?? false,
       totalPriceCents: r.totalPriceCents,
       isTakeaway: r.isTakeaway ?? false,
+      receiptOrderNumber: r.receiptOrderNumber ?? null,
       createdAt: r.createdAt?.toISOString() ?? null,
       completedAt: r.completedAt?.toISOString() ?? null,
     }));
