@@ -961,21 +961,23 @@ export default function Menu() {
   const { toast } = useToast();
   const { t } = useTranslation();
 
-  // Super Admin and Manager can select location; others use their assigned location.
+  const isSuperAdmin = hasRole(user, "super_admin");
+  const showLocationSelector = canSelectLocation(user);
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    canSelectLocation(user) ? null : (user?.locationId ?? null),
+    isSuperAdmin ? null : (canSelectLocation(user) ? null : (user?.locationId ?? null)),
   );
 
   const queryClient = useQueryClient();
   const { data: locations } = useLocations();
   const { data: menuItems, isLoading, isError, refetch } = useMenuItems(selectedLocationId);
 
-  // Auto-select first location for super_admin/manager so menu loads immediately
   useEffect(() => {
-    if (canSelectLocation(user) && locations?.length && selectedLocationId == null) {
+    if (isSuperAdmin && locations?.length && !selectedLocationId) {
+      setSelectedLocationId(locations[0].id);
+    } else if (showLocationSelector && locations?.length && selectedLocationId == null) {
       setSelectedLocationId(locations[0].id);
     }
-  }, [user, locations, selectedLocationId]);
+  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId]);
 
   const createMutation = useCreateMenuItem(selectedLocationId);
   const updateMutation = useUpdateMenuItem(selectedLocationId);
@@ -1323,7 +1325,7 @@ export default function Menu() {
           </div>
 
           <div className="flex items-center gap-4 w-full sm:w-auto">
-            {canSelectLocation(user) && (
+            {showLocationSelector && (
               <Select
                 value={selectedLocationId?.toString() || ""}
                 onValueChange={(val) => setSelectedLocationId(parseInt(val))}

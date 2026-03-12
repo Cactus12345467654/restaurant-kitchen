@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Copy } from "lucide-react";
-import { useAuth, canSelectLocation } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import {
   Select,
@@ -17,23 +17,23 @@ import { useToast } from "@/hooks/use-toast";
 export default function StatisticsLanding() {
   const { user } = useAuth();
   const { data: locations } = useLocations();
+  const isSuperAdmin = hasRole(user, "super_admin");
+  const showLocationSelector = canSelectLocation(user);
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    canSelectLocation(user) ? null : (user?.locationId ?? null),
+    isSuperAdmin ? null : (canSelectLocation(user) ? null : (user?.locationId ?? null)),
   );
   const { t } = useTranslation();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (canSelectLocation(user) && !selectedLocationId && locations?.length) {
+    if (isSuperAdmin && locations?.length && !selectedLocationId) {
       setSelectedLocationId(locations[0].id);
-    } else if (
-      !canSelectLocation(user) &&
-      user?.locationId &&
-      selectedLocationId !== user.locationId
-    ) {
+    } else if (showLocationSelector && !selectedLocationId && locations?.length) {
+      setSelectedLocationId(locations[0].id);
+    } else if (!showLocationSelector && user?.locationId && selectedLocationId !== user.locationId) {
       setSelectedLocationId(user.locationId);
     }
-  }, [user, locations, selectedLocationId]);
+  }, [isSuperAdmin, showLocationSelector, user, locations, selectedLocationId]);
 
   return (
     <ProtectedRoute allowedRoles={["super_admin", "location_admin"]}>
@@ -45,7 +45,7 @@ export default function StatisticsLanding() {
           <p className="text-muted-foreground mt-1">{t("stats.screenSubtitle")}</p>
         </div>
 
-        {canSelectLocation(user) && locations && locations.length > 0 && (
+        {showLocationSelector && locations && locations.length > 0 && (
           <Select
             value={selectedLocationId?.toString() ?? ""}
             onValueChange={(v) => setSelectedLocationId(Number(v))}

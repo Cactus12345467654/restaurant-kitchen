@@ -88,6 +88,7 @@ export const lv = {
   "locations.deleteLocation": "Dzēst lokāciju",
   "locations.deleteConfirm": "Vai tiešām vēlaties dzēst šo lokāciju? Visas ēdienkartes pozīcijas, modifikatori un saistītie dati tiks noņemti. Šai lokācijai piešķirtie lietotāji tiks atbrīvoti. Šo darbību nevar atsaukt.",
   "locations.deleted": "Lokācija dzēsta",
+  "locations.reordered": "Kārtojums atjaunināts",
 
   // Users / Staff
   "users.title": "Personāla pārvaldība",

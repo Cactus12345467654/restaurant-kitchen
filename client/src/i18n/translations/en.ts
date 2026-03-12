@@ -90,6 +90,7 @@ export const en: Record<TranslationKey, string> = {
   "locations.deleteLocation": "Delete Location",
   "locations.deleteConfirm": "Are you sure you want to delete this location? All menu items, modifiers, and related data will be removed. Users assigned to this location will be unassigned. This action cannot be undone.",
   "locations.deleted": "Location deleted",
+  "locations.reordered": "Order updated",
 
   // Users / Staff
   "users.title": "Staff Management",

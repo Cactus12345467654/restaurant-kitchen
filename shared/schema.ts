@@ -18,6 +18,7 @@ export const locations = pgTable("locations", {
   name: text("name").notNull(),
   address: text("address").notNull(),
   config: jsonb("config").$type<LocationConfig>().default({}),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

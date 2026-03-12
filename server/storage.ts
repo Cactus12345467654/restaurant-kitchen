@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, or, isNull, inArray, gte, lt, desc } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, gte, lt, desc, asc, max } from "drizzle-orm";
 import {
   users,
   locations,
@@ -43,6 +43,7 @@ export interface IStorage {
   createLocation(location: InsertLocation): Promise<Location>;
   updateLocation(id: number, updates: UpdateLocationRequest): Promise<Location>;
   deleteLocation(id: number): Promise<void>;
+  reorderLocations(order: number[]): Promise<void>;
 
   // Menu Items
   getMenuItems(locationId: number): Promise<MenuItem[]>;
@@ -133,7 +134,7 @@ export class DatabaseStorage implements IStorage {
 
   // Locations
   async getLocations(): Promise<Location[]> {
-    return await db.select().from(locations);
+    return await db.select().from(locations).orderBy(asc(locations.sortOrder), asc(locations.id));
   }
 
   async getLocation(id: number): Promise<Location | undefined> {
@@ -145,9 +146,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLocation(location: InsertLocation): Promise<Location> {
+    const [{ maxOrder }] = await db.select({ maxOrder: max(locations.sortOrder) }).from(locations);
+    const nextOrder = (maxOrder ?? 0) + 1;
     const [newLocation] = await db
       .insert(locations)
-      .values(location)
+      .values({ ...location, sortOrder: nextOrder })
       .returning();
     return newLocation;
   }
@@ -183,6 +186,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(orders).where(eq(orders.locationId, locationId));
     await db.update(users).set({ locationId: null }).where(eq(users.locationId, locationId));
     await db.delete(locations).where(eq(locations.id, locationId));
+  }
+
+  async reorderLocations(order: number[]): Promise<void> {
+    for (let i = 0; i < order.length; i++) {
+      await db.update(locations).set({ sortOrder: i }).where(eq(locations.id, order[i]));
+    }
   }
 
   // Orders

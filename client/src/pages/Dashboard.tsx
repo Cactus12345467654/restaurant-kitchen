@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth, canSelectLocation } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { useTranslation } from "@/i18n";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -30,20 +30,22 @@ export default function Dashboard() {
   const { data: locations } = useLocations();
 
   const assignedLocationId = user?.locationId ?? null;
+  const isSuperAdmin = hasRole(user, "super_admin");
   const showLocationSelector = canSelectLocation(user);
 
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    showLocationSelector ? null : assignedLocationId,
+    isSuperAdmin ? (locations?.[0]?.id ?? null) : (showLocationSelector ? null : assignedLocationId),
   );
 
   useEffect(() => {
-    if (!showLocationSelector && assignedLocationId) {
+    if (isSuperAdmin && locations?.length && !selectedLocationId) {
+      setSelectedLocationId(locations[0].id);
+    } else if (!showLocationSelector && assignedLocationId) {
       setSelectedLocationId(assignedLocationId);
-    }
-    if (showLocationSelector && !selectedLocationId && locations?.length) {
+    } else if (showLocationSelector && !selectedLocationId && locations?.length) {
       setSelectedLocationId(locations[0].id);
     }
-  }, [showLocationSelector, assignedLocationId, locations, selectedLocationId]);
+  }, [isSuperAdmin, showLocationSelector, assignedLocationId, locations, selectedLocationId]);
 
   const currentLocation = locations?.find((l) => l.id === selectedLocationId);
 
@@ -97,13 +99,13 @@ export default function Dashboard() {
               {t("dashboard.title")}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {canSelectLocation(user)
+              {showLocationSelector || isSuperAdmin
                 ? t("dashboard.overviewAll")
                 : t("dashboard.overviewLocation")}
             </p>
           </div>
 
-          {showLocationSelector ? (
+          {showLocationSelector && locations?.length ? (
             <Select
               value={selectedLocationId?.toString() ?? ""}
               onValueChange={(v) => setSelectedLocationId(Number(v))}

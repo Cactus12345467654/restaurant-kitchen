@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth, canSelectLocation } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { useLocationModifierGroups } from "@/hooks/use-menu";
 import { useTranslation } from "@/i18n";
@@ -19,15 +19,19 @@ export default function Modifiers() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const { data: locations } = useLocations();
+  const isSuperAdmin = hasRole(user, "super_admin");
+  const showLocationSelector = canSelectLocation(user);
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    canSelectLocation(user) ? null : (user?.locationId ?? null)
+    isSuperAdmin ? null : (canSelectLocation(user) ? null : (user?.locationId ?? null)),
   );
 
   useEffect(() => {
-    if (canSelectLocation(user) && locations?.length && selectedLocationId == null) {
+    if (isSuperAdmin && locations?.length && !selectedLocationId) {
+      setSelectedLocationId(locations[0].id);
+    } else if (showLocationSelector && locations?.length && selectedLocationId == null) {
       setSelectedLocationId(locations[0].id);
     }
-  }, [user, locations, selectedLocationId]);
+  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId]);
 
   const { data: groups = [], isLoading } = useLocationModifierGroups(selectedLocationId);
 
@@ -42,7 +46,7 @@ export default function Modifiers() {
             </p>
           </div>
 
-          {canSelectLocation(user) && locations && locations.length > 1 && (
+          {showLocationSelector && locations && locations.length > 0 && (
             <Select
               value={selectedLocationId != null ? String(selectedLocationId) : ""}
               onValueChange={(val) => setSelectedLocationId(Number(val))}

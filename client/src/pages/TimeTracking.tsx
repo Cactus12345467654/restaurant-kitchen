@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth, hasRole } from "@/hooks/use-auth";
+import { useAuth, hasRole, canSelectLocation } from "@/hooks/use-auth";
 import { useUsers } from "@/hooks/use-users";
 import { useLocations } from "@/hooks/use-locations";
 import { useTimeEntries } from "@/hooks/use-time-entries";
@@ -125,7 +125,7 @@ export default function TimeTracking() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {isSuperAdmin && locations.length > 0 && (
+            {canSelectLocation(user) && locations.length > 0 && (
               <Select
                 value={selectedLocationId != null ? String(selectedLocationId) : ""}
                 onValueChange={(val) => setSelectedLocationId(Number(val))}

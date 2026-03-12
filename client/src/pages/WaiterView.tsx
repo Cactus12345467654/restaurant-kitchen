@@ -2,9 +2,11 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMenuItems, useMenuItemModifiers } from "@/hooks/use-menu";
 import { useActiveTimeSessions } from "@/hooks/use-active-time-sessions";
-import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Radio, Clock } from "lucide-react";
+import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Radio, Clock, MapPin } from "lucide-react";
 import { resolveImageUrl } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Badge } from "@/components/ui/badge";
+import { useLocations } from "@/hooks/use-locations";
 import { useTranslation, LanguageSwitcher } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { ORDER_STATUS } from "@/lib/order-status";
@@ -358,6 +360,8 @@ export default function WaiterView() {
   };
 
   const { data: menuItems, isLoading, isError, refetch } = useMenuItems(locationId);
+  const { data: locations } = useLocations();
+  const currentLocation = locations?.find((l) => l.id === locationId);
 
   const activeByCategory = useMemo(() => {
     const items = (menuItems ?? []).filter(
@@ -455,6 +459,15 @@ export default function WaiterView() {
           <h1 className="text-2xl font-display font-bold">
             {selectedCategory ?? t("waiter.title")}
           </h1>
+          {currentLocation && (
+            <Badge
+              variant="secondary"
+              className="text-sm px-3 py-1.5 gap-1.5 rounded-lg shrink-0"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              {currentLocation.name}
+            </Badge>
+          )}
           <div className="ml-auto shrink-0 flex items-center gap-3">
             <button
               onClick={() => setTimeTrackingOpen(true)}

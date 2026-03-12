@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth, canSelectLocation } from "@/hooks/use-auth";
+import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { useTranslation } from "@/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,20 +46,22 @@ export default function Statistics() {
   const { data: locations } = useLocations();
 
   const assignedLocationId = user?.locationId ?? null;
+  const isSuperAdmin = hasRole(user, "super_admin");
   const showSelector = canSelectLocation(user);
 
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    showSelector ? null : assignedLocationId,
+    isSuperAdmin ? null : (showSelector ? null : assignedLocationId),
   );
 
   useEffect(() => {
-    if (!showSelector && assignedLocationId) {
+    if (isSuperAdmin && locations?.length && !selectedLocationId) {
+      setSelectedLocationId(locations[0].id);
+    } else if (!showSelector && assignedLocationId) {
       setSelectedLocationId(assignedLocationId);
-    }
-    if (showSelector && !selectedLocationId && locations?.length) {
+    } else if (showSelector && !selectedLocationId && locations?.length) {
       setSelectedLocationId(locations[0].id);
     }
-  }, [showSelector, assignedLocationId, locations, selectedLocationId]);
+  }, [isSuperAdmin, showSelector, assignedLocationId, locations, selectedLocationId]);
 
   const currentLocation = locations?.find((l) => l.id === selectedLocationId);
 
@@ -71,7 +73,7 @@ export default function Statistics() {
             {t("stats.title")}
           </h1>
 
-          {showSelector ? (
+          {showSelector && locations?.length ? (
             <Select
               value={selectedLocationId?.toString() ?? ""}
               onValueChange={(v) => setSelectedLocationId(Number(v))}

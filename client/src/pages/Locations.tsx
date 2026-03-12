@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation } from "@/hooks/use-locations";
+import { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation, useReorderLocations } from "@/hooks/use-locations";
 import { useTranslation } from "@/i18n";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, MapPin, Edit2, Trash2, Loader2 } from "lucide-react";
+import { Plus, MapPin, Edit2, Trash2, Loader2, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,6 +26,7 @@ export default function Locations() {
   const createMutation = useCreateLocation();
   const updateMutation = useUpdateLocation();
   const deleteMutation = useDeleteLocation();
+  const reorderMutation = useReorderLocations();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -33,6 +34,36 @@ export default function Locations() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ name: "", address: "" });
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(id));
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+  const handleDrop = async (e: React.DragEvent, targetId: number) => {
+    e.preventDefault();
+    setDraggedId(null);
+    if (!locations?.length || draggedId === null || draggedId === targetId) return;
+    const ids = locations.map((l) => l.id);
+    const fromIdx = ids.indexOf(draggedId);
+    const toIdx = ids.indexOf(targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const newOrder = [...ids];
+    newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, draggedId);
+    try {
+      await reorderMutation.mutateAsync(newOrder);
+      toast({ title: t("locations.reordered") });
+    } catch (err: any) {
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
+    }
+  };
+  const handleDragEnd = () => setDraggedId(null);
 
   const openCreate = () => {
     setEditingId(null);
@@ -96,6 +127,7 @@ export default function Locations() {
             <Table>
               <TableHeader className="bg-white/5">
                 <TableRow className="border-border/50 hover:bg-transparent">
+                  <TableHead className="w-10 font-semibold text-muted-foreground"></TableHead>
                   <TableHead className="font-semibold text-muted-foreground">{t("common.name")}</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">{t("locations.address")}</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">{t("locations.created")}</TableHead>
@@ -105,13 +137,24 @@ export default function Locations() {
               <TableBody>
                 {locations?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                       {t("locations.noLocations")}
                     </TableCell>
                   </TableRow>
                 )}
                 {locations?.map((loc) => (
-                  <TableRow key={loc.id} className="border-border/50 hover:bg-white/5 transition-colors">
+                  <TableRow
+                    key={loc.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, loc.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, loc.id)}
+                    onDragEnd={handleDragEnd}
+                    className={`border-border/50 hover:bg-white/5 transition-colors cursor-grab active:cursor-grabbing ${draggedId === loc.id ? "opacity-50" : ""}`}
+                  >
+                    <TableCell className="w-10 py-2">
+                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-primary" />

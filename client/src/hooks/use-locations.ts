@@ -82,3 +82,25 @@ export function useDeleteLocation() {
     },
   });
 }
+
+export function useReorderLocations() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (order: number[]) => {
+      const res = await fetch("/api/locations/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to reorder");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.locations.list.path] });
+    },
+  });
+}
