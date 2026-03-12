@@ -22,7 +22,6 @@ import {
 import {
   buildReceiptData,
   printKitchenReceipt,
-  isCactusFoodTruck,
 } from "@/lib/kitchen-receipt-print";
 
 interface OrderLineModifier {
@@ -320,13 +319,9 @@ export default function WaiterView() {
     });
     const pagerNum = pagerMode ? selectedPager : null;
     try {
-      if (isCactusFoodTruck(currentLocation?.name)) {
-        const receiptData = buildReceiptData(locationId, orderLines, orderTotal);
-        await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway, receiptData.orderNumber);
-        printKitchenReceipt(receiptData);
-      } else {
-        await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway);
-      }
+      const receiptData = buildReceiptData(locationId, orderLines, orderTotal);
+      await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway, receiptData.orderNumber);
+      printKitchenReceipt(receiptData);
       setOrderLines([]);
       setShowConfirm(false);
       setSelectedPager(null);

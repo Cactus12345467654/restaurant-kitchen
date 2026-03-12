@@ -19,7 +19,7 @@ export interface SharedOrder {
   totalPriceCents?: number | null;
   /** True when order is for takeaway (līdzi), false for dine-in (uz vietas). */
   isTakeaway?: boolean;
-  /** Čeka numurs (parādās UI un čekā Cactus Food truck). */
+  /** Čeka numurs (parādās UI un čekā). */
   receiptOrderNumber?: number | null;
   /** ISO timestamp when order was created (for statistics). */
   createdAt?: string | null;

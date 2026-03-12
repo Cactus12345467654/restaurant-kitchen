@@ -101,7 +101,7 @@ export const orders = pgTable("orders", {
   pagerCalled: boolean("pager_called").default(false),
   totalPriceCents: integer("total_price_cents"),
   isTakeaway: boolean("is_takeaway").default(false),
-  /** Čeka numurs (dienas rindas nr) – parādās UI un čekā Cactus Food truck. */
+  /** Čeka numurs (dienas rindas nr) – parādās UI un čekā visās lokācijās. */
   receiptOrderNumber: integer("receipt_order_number"),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),

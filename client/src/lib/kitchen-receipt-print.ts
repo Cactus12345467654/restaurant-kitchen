@@ -1,5 +1,5 @@
 /**
- * Kitchen receipt printing for Cactus Food truck.
+ * Kitchen receipt printing for all locations.
  * Day-based sequence numbers, receipt content, thermal printer.
  */
 
@@ -176,8 +176,3 @@ export function printKitchenReceipt(data: ReceiptData): void {
   }
 }
 
-export function isCactusFoodTruck(locationName: string | undefined): boolean {
-  if (!locationName) return false;
-  const lower = locationName.trim().toLowerCase();
-  return lower === "cactus food truck" || lower.includes("cactus") && lower.includes("food truck");
-}
