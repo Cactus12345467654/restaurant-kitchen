@@ -374,6 +374,10 @@ export async function registerRoutes(
         }
       }
       input.password = await hashPassword(input.password);
+      if ((input as any).timeTrackingPin !== undefined) {
+        const pin = (input as any).timeTrackingPin;
+        (input as any).timeTrackingPin = pin && String(pin).trim() ? await hashPassword(String(pin).trim()) : null;
+      }
       const created = await storage.createUser(input);
       res.status(201).json(created);
     } catch (err) {

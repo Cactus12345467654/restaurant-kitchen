@@ -108,7 +108,7 @@ export default function Users() {
       if (formData.password) {
         payload.password = formData.password;
       }
-      if (editingId && formData.timeTrackingPin.trim()) {
+      if (formData.timeTrackingPin.trim()) {
         payload.timeTrackingPin = formData.timeTrackingPin.trim();
       }
       if (!formData.password && !editingId) {
@@ -253,7 +253,7 @@ export default function Users() {
                   className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
                 />
               </div>
-              {editingId && (
+              {(editingId || formData.roles.some(r => r === "waiter" || r === "kitchen_staff")) && (
                 <div className="space-y-2">
                   <Label>{t("users.timeTrackingPin")}</Label>
                   <Input 
