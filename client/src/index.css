@@ -76,7 +76,7 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
+    --border: 240 6% 70%;
     --input: 240 6% 90%;
     --ring: 262 83% 58%;
 
@@ -86,9 +86,18 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 5% 96%;
     --sidebar-accent-foreground: 240 10% 10%;
-    --sidebar-border: 240 6% 90%;
+    --sidebar-border: 240 6% 70%;
     --sidebar-ring: 262 83% 58%;
   }
+
+  /* Biezākas kontūras dienas režīmā – labāka vizuāla nodalīšana (3px) */
+  html[data-theme="light"] .border { border-width: 3px; }
+  html[data-theme="light"] .border-b { border-bottom-width: 3px; }
+  html[data-theme="light"] .border-t { border-top-width: 3px; }
+  html[data-theme="light"] .border-l { border-left-width: 3px; }
+  html[data-theme="light"] .border-r { border-right-width: 3px; }
+  html[data-theme="light"] .border-x { border-left-width: 3px; border-right-width: 3px; }
+  html[data-theme="light"] .border-y { border-top-width: 3px; border-bottom-width: 3px; }
 
   body {
     @apply bg-background text-foreground antialiased;

@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { syncAllLocationsToTemplate } from "./location-config";
 
 const app = express();
 const httpServer = createServer(app);
@@ -63,6 +64,15 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
+
+  try {
+    const syncResult = await syncAllLocationsToTemplate();
+    if (syncResult.synced > 0) {
+      log(`Synced ${syncResult.synced}/${syncResult.total} locations to template`);
+    }
+  } catch (err) {
+    console.error("[startup] Location config sync failed:", err);
+  }
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
