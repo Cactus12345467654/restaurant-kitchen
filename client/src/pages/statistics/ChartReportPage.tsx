@@ -62,25 +62,29 @@ function toLocalDateStr(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-const chartConfig = {
-  gatavojas: {
-    label: "Gatavojas",
-    color: "hsl(25 95% 53%)",
-    theme: { light: "hsl(25 95% 53%)", dark: "hsl(25 95% 53%)" },
-  },
-  pabeigti: {
-    label: "Pabeigti",
-    color: "hsl(142 71% 45%)",
-    theme: { light: "hsl(142 71% 45%)", dark: "hsl(142 71% 45%)" },
-  },
-};
 
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+function getChartConfig(t: (k: string) => string) {
+  return {
+    gatavojas: {
+      label: t("statsChart.chartGatavojas"),
+      color: "hsl(25 95% 53%)",
+      theme: { light: "hsl(25 95% 53%)", dark: "hsl(25 95% 53%)" },
+    },
+    pabeigti: {
+      label: t("statsChart.chartPabeigti"),
+      color: "hsl(142 71% 45%)",
+      theme: { light: "hsl(142 71% 45%)", dark: "hsl(142 71% 45%)" },
+    },
+  };
+}
+
 export function ChartReportPage({ locationId }: { locationId?: number | null }) {
   const { t } = useTranslation();
+  const chartConfig = useMemo(() => getChartConfig(t), [t]);
   const orders = useAllOrders(locationId);
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
 
@@ -171,7 +175,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
       </h2>
 
       {/* Daily chart */}
-      <Card className="p-6 bg-card border-border/50 rounded-2xl">
+      <Card className="p-6 bg-card border-border/50 dark:border-white/50 rounded-2xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-1">
           <div className="flex flex-wrap items-baseline gap-x-6">
             <p className="text-lg font-semibold text-foreground">
@@ -186,7 +190,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
               <Button
                 variant="outline"
                 className={cn(
-                  "gap-2 border-border/50",
+                  "gap-2 border-border/50 dark:border-white/50",
                   !isSameDay(selectedDate, new Date()) && "border-primary/50 text-primary"
                 )}
               >
@@ -194,7 +198,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
                 {format(selectedDate, "dd.MM.yyyy")}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-card border-border/50" align="end">
+            <PopoverContent className="w-auto p-0 bg-card border-border/50 dark:border-white/50" align="end">
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -231,7 +235,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
                 const rev = p?.revenue ?? 0;
                 const avg = cnt > 0 ? (rev / 100 / cnt).toFixed(2) : "0.00";
                 return (
-                  <div className="rounded-lg border border-border/50 bg-background px-3 py-2 shadow-lg">
+                  <div className="rounded-lg border border-border/50 dark:border dark:border-white/50 bg-background px-3 py-2 shadow-lg">
                     <p className="font-medium mb-1">{p?.hour ?? ""}:00</p>
                     <p className="text-xs text-muted-foreground">
                       {t("statsChart.orders")}: {cnt}
@@ -247,14 +251,14 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
               }}
             />
             <ChartLegend content={<ChartLegendContent />} />
-            <Bar dataKey="gatavojas" stackId="a" fill="var(--color-gatavojas)" name="Gatavojas" />
-            <Bar dataKey="pabeigti" stackId="a" fill="var(--color-pabeigti)" name="Pabeigti" />
+            <Bar dataKey="gatavojas" stackId="a" fill="var(--color-gatavojas)" name={t("statsChart.chartGatavojas")} />
+            <Bar dataKey="pabeigti" stackId="a" fill="var(--color-pabeigti)" name={t("statsChart.chartPabeigti")} />
           </BarChart>
         </ChartContainer>
       </Card>
 
       {/* Weekly chart */}
-      <Card className="p-6 bg-card border-border/50 rounded-2xl">
+      <Card className="p-6 bg-card border-border/50 dark:border-white/50 rounded-2xl">
         <div className="flex flex-wrap items-baseline gap-x-6 mb-1">
           <p className="text-lg font-semibold text-foreground">
             {t("statsChart.weeklyRevenue")}: €{(weeklyRevenue / 100).toFixed(2)}
@@ -288,7 +292,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
                 const rev = p?.revenue ?? 0;
                 const avg = cnt > 0 ? (rev / 100 / cnt).toFixed(2) : "0.00";
                 return (
-                  <div className="rounded-lg border border-border/50 bg-background px-3 py-2 shadow-lg">
+                  <div className="rounded-lg border border-border/50 dark:border dark:border-white/50 bg-background px-3 py-2 shadow-lg">
                     <p className="font-medium mb-1">{p?.day ?? label}</p>
                     <p className="text-xs text-muted-foreground">
                       {t("statsChart.orders")}: {cnt}
@@ -304,8 +308,8 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
               }}
             />
             <ChartLegend content={<ChartLegendContent />} />
-            <Bar dataKey="gatavojas" stackId="b" fill="var(--color-gatavojas)" name="Gatavojas" />
-            <Bar dataKey="pabeigti" stackId="b" fill="var(--color-pabeigti)" name="Pabeigti" />
+            <Bar dataKey="gatavojas" stackId="b" fill="var(--color-gatavojas)" name={t("statsChart.chartGatavojas")} />
+            <Bar dataKey="pabeigti" stackId="b" fill="var(--color-pabeigti)" name={t("statsChart.chartPabeigti")} />
           </BarChart>
         </ChartContainer>
       </Card>

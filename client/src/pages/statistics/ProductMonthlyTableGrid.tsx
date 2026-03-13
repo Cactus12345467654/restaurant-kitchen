@@ -31,7 +31,7 @@ export function ProductMonthlyTableGrid({
   const { rows, daysInMonth, columnTotals, grandTotal } = matrix;
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border/50 bg-card/30">
+    <div className="overflow-x-auto rounded-xl border border-border/50 dark:border dark:border-white/50 bg-card/30">
       <Table>
         <TableHeader>
           <TableRow className="border-border/50 hover:bg-transparent h-8">
@@ -50,7 +50,7 @@ export function ProductMonthlyTableGrid({
                 {day.toString().padStart(2, "0")}.
               </TableHead>
             ))}
-            <TableHead className="sticky right-0 z-10 min-w-[3.5rem] bg-primary/10 font-semibold text-xs px-2 py-1.5 text-center border-l-2 border-primary/30">
+            <TableHead className="sticky right-0 z-10 min-w-[3.5rem] bg-primary/10 font-semibold text-xs px-2 py-1.5 text-center border-l border-primary/30 dark:border-l dark:border-white/50">
               {t("tableReport.total")}
             </TableHead>
           </TableRow>
@@ -69,9 +69,9 @@ export function ProductMonthlyTableGrid({
             rows.map((row) => (
               <TableRow
                 key={row.productName}
-                className="border-border/30 hover:bg-muted/20 h-8"
+                className="border-border/30 dark:border-white/50 hover:bg-muted/20 h-8"
               >
-                <TableCell className="sticky left-0 z-10 bg-card/80 font-medium text-xs px-2 py-1.5 border-r border-border/30">
+                <TableCell className="sticky left-0 z-10 bg-card/80 font-medium text-xs px-2 py-1.5 border-r border-border/30 dark:border-white/50">
                   {row.productName}
                 </TableCell>
                 {row.dayQuantities.map((q, i) => (
@@ -86,7 +86,7 @@ export function ProductMonthlyTableGrid({
                     {q > 0 ? q : ""}
                   </TableCell>
                 ))}
-                <TableCell className="sticky right-0 z-10 bg-primary/5 font-semibold text-xs px-2 py-1.5 text-center border-l-2 border-primary/20">
+                <TableCell className="sticky right-0 z-10 bg-primary/5 font-semibold text-xs px-2 py-1.5 text-center border-l border-primary/20 dark:border-l dark:border-white/50">
                   {row.rowTotal > 0 ? row.rowTotal : ""}
                 </TableCell>
               </TableRow>
@@ -109,7 +109,7 @@ export function ProductMonthlyTableGrid({
                   {tot > 0 ? tot : ""}
                 </TableCell>
               ))}
-              <TableCell className="sticky right-0 z-10 bg-primary/20 font-bold text-xs px-2 py-1.5 text-center border-l-2 border-primary/40">
+              <TableCell className="sticky right-0 z-10 bg-primary/20 font-bold text-xs px-2 py-1.5 text-center border-l border-primary/40 dark:border-l dark:border-white/50">
                 {grandTotal}
               </TableCell>
             </TableRow>

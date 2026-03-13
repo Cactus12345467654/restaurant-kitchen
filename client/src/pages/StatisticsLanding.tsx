@@ -30,8 +30,9 @@ export default function StatisticsLanding() {
       setSelectedLocationId(locations[0].id);
     } else if (showLocationSelector && !selectedLocationId && locations?.length) {
       setSelectedLocationId(locations[0].id);
-    } else if (!showLocationSelector && user?.locationId && selectedLocationId !== user.locationId) {
-      setSelectedLocationId(user.locationId);
+    } else if (!showLocationSelector) {
+      const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
+      if (userLocId != null && selectedLocationId !== userLocId) setSelectedLocationId(userLocId);
     }
   }, [isSuperAdmin, showLocationSelector, user, locations, selectedLocationId]);
 

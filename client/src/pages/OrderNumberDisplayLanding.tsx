@@ -4,12 +4,18 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, Copy, MapPin } from "lucide-react";
 import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
 
-export default function Kitchen() {
+export default function OrderNumberDisplayLanding() {
   const { user } = useAuth();
   const { data: locations } = useLocations();
   const isSuperAdmin = hasRole(user, "super_admin");
@@ -21,27 +27,29 @@ export default function Kitchen() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
     if (isSuperAdmin && locations?.length && !selectedLocationId) {
       setSelectedLocationId(locations[0].id);
     } else if (showLocationSelector && !selectedLocationId && locations?.length) {
       setSelectedLocationId(locations[0].id);
-    } else if (!showLocationSelector && userLocId != null && !selectedLocationId) {
-      setSelectedLocationId(userLocId);
+    } else if (!showLocationSelector) {
+      const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
+      if (userLocId != null && selectedLocationId !== userLocId) setSelectedLocationId(userLocId);
     }
-  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId, user]);
+  }, [isSuperAdmin, showLocationSelector, user, locations, selectedLocationId]);
 
   const currentLocation = locations?.find((l) => l.id === selectedLocationId);
 
   return (
-    <ProtectedRoute allowedRoles={["super_admin", "location_admin", "manager", "kitchen_staff"]}>
+    <ProtectedRoute allowedRoles={["super_admin", "location_admin", "manager", "waiter", "kitchen_staff"]}>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">{t("kitchen.title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("dashboard.kitchenDesc")}</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">
+            {t("orderNumbers.screenTitle")}
+          </h1>
+          <p className="text-muted-foreground mt-1">{t("orderNumbers.screenSubtitle")}</p>
         </div>
 
-        {showLocationSelector && locations?.length ? (
+        {showLocationSelector && locations && locations.length > 0 && (
           <Select
             value={selectedLocationId?.toString() ?? ""}
             onValueChange={(v) => setSelectedLocationId(Number(v))}
@@ -57,7 +65,9 @@ export default function Kitchen() {
               ))}
             </SelectContent>
           </Select>
-        ) : currentLocation ? (
+        )}
+
+        {!showLocationSelector && currentLocation && (
           <Badge
             variant="secondary"
             className="text-sm px-3 py-1.5 gap-1.5 rounded-lg"
@@ -65,23 +75,25 @@ export default function Kitchen() {
             <MapPin className="w-3.5 h-3.5" />
             {currentLocation.name}
           </Badge>
-        ) : null}
+        )}
 
         <div className="flex gap-2">
           <Button
-            onClick={() => window.open(`/kitchen/view?locationId=${selectedLocationId}`, "_blank")}
+            onClick={() =>
+              window.open(`/order-numbers/view?locationId=${selectedLocationId}`, "_blank")
+            }
             className="gap-2"
             disabled={!selectedLocationId}
           >
             <ExternalLink className="h-4 w-4" />
-            {t("dashboard.openKitchen")}
+            {t("orderNumbers.openWindow")}
           </Button>
           <Button
             variant="outline"
             className="gap-2"
             disabled={!selectedLocationId}
             onClick={() => {
-              const url = `${window.location.origin}/kitchen/view?locationId=${selectedLocationId}`;
+              const url = `${window.location.origin}/order-numbers/view?locationId=${selectedLocationId}`;
               navigator.clipboard.writeText(url).then(() => toast({ title: t("common.linkCopied") }));
             }}
           >

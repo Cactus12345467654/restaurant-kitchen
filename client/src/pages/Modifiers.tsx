@@ -26,12 +26,15 @@ export default function Modifiers() {
   );
 
   useEffect(() => {
+    const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
     if (isSuperAdmin && locations?.length && !selectedLocationId) {
       setSelectedLocationId(locations[0].id);
     } else if (showLocationSelector && locations?.length && selectedLocationId == null) {
       setSelectedLocationId(locations[0].id);
+    } else if (!showLocationSelector && userLocId != null && !selectedLocationId) {
+      setSelectedLocationId(userLocId);
     }
-  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId]);
+  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId, user]);
 
   const { data: groups = [], isLoading } = useLocationModifierGroups(selectedLocationId);
 
@@ -51,7 +54,7 @@ export default function Modifiers() {
               value={selectedLocationId != null ? String(selectedLocationId) : ""}
               onValueChange={(val) => setSelectedLocationId(Number(val))}
             >
-              <SelectTrigger className="w-[220px] bg-black/20 border-border/50">
+              <SelectTrigger className="w-[220px] bg-black/20 border-border/50 dark:border-white/50">
                 <SelectValue placeholder={t("modifiersLib.selectLocation")} />
               </SelectTrigger>
               <SelectContent>
@@ -87,7 +90,7 @@ export default function Modifiers() {
               return (
                 <Card
                   key={group.id}
-                  className={`border-border/50 hover:border-border transition-colors ${!active ? "opacity-60" : ""}`}
+                  className={`border-border/50 dark:border-white/50 hover:border-border transition-colors ${!active ? "opacity-60" : ""}`}
                 >
                   <CardContent className="p-5 flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 space-y-1.5">

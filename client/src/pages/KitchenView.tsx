@@ -74,7 +74,7 @@ export default function KitchenView() {
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
       {/* Compact header */}
-      <header className="border-b border-border/50 px-4 py-2.5 flex items-center justify-between shrink-0 bg-card/50 backdrop-blur-sm">
+      <header className="border-b border-border/50 dark:border-b dark:border-white/50 px-4 py-2.5 flex items-center justify-between shrink-0 bg-card/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2.5">
             <UtensilsCrossed className="w-5 h-5 text-orange-400" />
@@ -98,7 +98,7 @@ export default function KitchenView() {
 
       {/* Single passive column: live queue (no cook action required) */}
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="px-4 py-2 border-b border-border/30 bg-orange-500/5 shrink-0 flex items-center gap-2">
+        <div className="px-4 py-2 border-b border-border/30 dark:border-b dark:border-white/50 bg-orange-500/5 shrink-0 flex items-center gap-2">
           <Flame className="w-4 h-4 text-orange-400" />
           <span className="font-display font-bold text-sm text-orange-400">{t("kitchen.gatavojas")}</span>
           {kitchenOrders.length > 0 && (
@@ -128,7 +128,7 @@ export default function KitchenView() {
                     return (
                       <div
                         key={order.id}
-                        className="bg-card/80 border-l-[3px] border-l-orange-500 rounded-lg px-3 py-2 shadow-sm shadow-black/10 min-w-0 shrink-0"
+                        className="bg-card/80 border-l border-l-orange-500 rounded-lg px-3 py-2 shadow-sm shadow-black/10 min-w-0 shrink-0"
                       >
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-sm font-medium text-muted-foreground truncate flex items-center gap-2">

@@ -53,7 +53,7 @@ export function useTranslation() {
 export function LanguageSwitcher() {
   const { lang, setLang } = useTranslation();
   return (
-    <div className="inline-flex items-center rounded-md border border-border/50 text-xs overflow-hidden">
+    <div className="inline-flex items-center rounded-md border border-border/50 dark:border dark:border-white/50 text-xs overflow-hidden">
       <button
         onClick={() => setLang("lv")}
         className={`px-2 py-1 transition-colors ${

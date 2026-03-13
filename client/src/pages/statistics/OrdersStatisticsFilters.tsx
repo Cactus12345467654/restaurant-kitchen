@@ -106,7 +106,7 @@ export function OrdersStatisticsFilters({
   };
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/30 p-4">
+    <div className="rounded-xl border border-border/50 dark:border dark:border-white/50 bg-card/30 p-4">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}

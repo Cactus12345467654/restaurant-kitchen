@@ -21,7 +21,7 @@ import { ProductMonthlyTableReport } from "./statistics/ProductMonthlyTableRepor
 function StatsProductsTab() {
   const { t } = useTranslation();
   return (
-    <Card className="p-8 bg-card border-border/50 rounded-2xl">
+    <Card className="p-8 bg-card border-border/50 dark:border-white/50 rounded-2xl">
       <h2 className="text-xl font-display font-semibold text-foreground">
         {t("stats.tabProducts")}
       </h2>
@@ -32,7 +32,7 @@ function StatsProductsTab() {
 function StatsModifiersTab() {
   const { t } = useTranslation();
   return (
-    <Card className="p-8 bg-card border-border/50 rounded-2xl">
+    <Card className="p-8 bg-card border-border/50 dark:border-white/50 rounded-2xl">
       <h2 className="text-xl font-display font-semibold text-foreground">
         {t("stats.tabModifiers")}
       </h2>
@@ -45,7 +45,7 @@ export default function Statistics() {
   const { user } = useAuth();
   const { data: locations } = useLocations();
 
-  const assignedLocationId = user?.locationId ?? null;
+  const assignedLocationId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
   const isSuperAdmin = hasRole(user, "super_admin");
   const showSelector = canSelectLocation(user);
 
@@ -101,7 +101,7 @@ export default function Statistics() {
         </div>
 
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1 bg-muted/50 border border-border/50 rounded-xl">
+          <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1 bg-muted/50 border border-border/50 dark:border dark:border-white/50 rounded-xl">
             <TabsTrigger
               value="orders"
               className="rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary"

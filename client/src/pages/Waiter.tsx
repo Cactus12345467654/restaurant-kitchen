@@ -22,12 +22,15 @@ export default function Waiter() {
   const { toast } = useToast();
 
   useEffect(() => {
+    const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
     if (isSuperAdmin && locations?.length && !selectedLocationId) {
       setSelectedLocationId(locations[0].id);
     } else if (showLocationSelector && !selectedLocationId && locations?.length) {
       setSelectedLocationId(locations[0].id);
+    } else if (!showLocationSelector && userLocId != null && !selectedLocationId) {
+      setSelectedLocationId(userLocId);
     }
-  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId]);
+  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId, user]);
 
   const currentLocation = locations?.find((l) => l.id === selectedLocationId);
   const [pagerMode, setPagerMode] = usePagerMode();
@@ -37,8 +40,8 @@ export default function Waiter() {
     <ProtectedRoute allowedRoles={["super_admin", "location_admin", "manager", "waiter"]}>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Viesmīļa ekrāns</h1>
-          <p className="text-muted-foreground mt-1">Šeit būs viesmīļa darba vide.</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">{t("dashboard.waiterScreen")}</h1>
+          <p className="text-muted-foreground mt-1">{t("dashboard.waiterDesc")}</p>
         </div>
 
         {showLocationSelector && locations?.length ? (
@@ -74,7 +77,7 @@ export default function Waiter() {
             disabled={!selectedLocationId}
           >
             <ExternalLink className="h-4 w-4 shrink-0" />
-            Atvērt viesmīļa logu
+            {t("dashboard.openWaiter")}
           </Button>
           <Button
             variant="outline"

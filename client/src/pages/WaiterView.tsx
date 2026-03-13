@@ -95,9 +95,9 @@ function ModifierModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex">
-      <div className="bg-background text-foreground border-r border-border/50 w-[45%] min-w-[320px] max-w-2xl flex flex-col h-full">
+      <div className="bg-background text-foreground border-r border-border/50 dark:border-r dark:border-white/50 w-[45%] min-w-[320px] max-w-2xl flex flex-col h-full">
         {/* header */}
-        <div className="flex items-center gap-4 px-6 py-4 border-b border-border/50 shrink-0">
+        <div className="flex items-center gap-4 px-6 py-4 border-b border-border/50 dark:border-b dark:border-white/50 shrink-0">
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
@@ -149,7 +149,7 @@ function ModifierModal({
                           className={`rounded-lg border p-3 text-left transition-colors flex flex-col gap-0.5 ${
                             isSelected
                               ? "border-primary bg-primary/15"
-                              : "border-border/50 bg-white/5 hover:bg-white/10"
+                              : "border-border/50 dark:border dark:border-white/50 bg-white/5 hover:bg-white/10"
                           }`}
                         >
                           <span className="font-medium text-sm text-foreground">{opt.name}</span>
@@ -169,7 +169,7 @@ function ModifierModal({
         </div>
 
         {/* footer with add button */}
-        <div className="border-t border-border/50 px-6 py-4 shrink-0 space-y-3">
+        <div className="border-t border-border/50 dark:border-t dark:border-white/50 px-6 py-4 shrink-0 space-y-3">
           {Object.keys(selections).length > 0 && (
             <div className="flex flex-wrap gap-2">
               {groups.map((g: any) => {
@@ -435,7 +435,7 @@ export default function WaiterView() {
     <div className="h-screen bg-background text-foreground flex">
       {/* left: menu content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="border-b border-border/50 px-6 py-4 flex items-center gap-4 shrink-0">
+        <header className="border-b border-border/50 dark:border-b dark:border-white/50 px-6 py-4 flex items-center gap-4 shrink-0">
           {selectedCategory && (
             <button
               onClick={() => setSelectedCategory(null)}
@@ -461,7 +461,7 @@ export default function WaiterView() {
             <button
               onClick={() => setTimeTrackingOpen(true)}
               className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                activeSessions.length > 0 ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "border-border/50 bg-white/5 text-muted-foreground hover:text-foreground"
+                activeSessions.length > 0 ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "border-border/50 dark:border dark:border-white/50 bg-white/5 text-muted-foreground hover:text-foreground"
               }`}
             >
               <Clock className="h-4 w-4" />
@@ -484,7 +484,7 @@ export default function WaiterView() {
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className="rounded-lg border border-border/50 bg-white/5 hover:bg-white/10 transition-colors p-6 flex flex-col items-center justify-center gap-3 min-h-[140px] text-center"
+                  className="rounded-lg border border-border/50 dark:border dark:border-white/50 bg-white/5 hover:bg-white/10 transition-colors p-6 flex flex-col items-center justify-center gap-3 min-h-[140px] text-center"
                 >
                   <UtensilsCrossed className="h-8 w-8 text-primary" />
                   <span className="font-semibold text-lg text-foreground">{category}</span>
@@ -500,7 +500,7 @@ export default function WaiterView() {
                 <button
                   key={item.id}
                   onClick={() => handleProductClick({ id: item.id, name: item.name, price: item.price })}
-                  className="rounded-lg border border-border/50 bg-white/5 hover:bg-white/10 transition-colors overflow-hidden flex flex-col text-left [touch-action:manipulation]"
+                  className="rounded-lg border border-border/50 dark:border dark:border-white/50 bg-white/5 hover:bg-white/10 transition-colors overflow-hidden flex flex-col text-left [touch-action:manipulation]"
                 >
                   {resolveImageUrl(item) && !brokenImages.has(item.id) ? (
                     <img
@@ -530,9 +530,9 @@ export default function WaiterView() {
       </div>
 
       {/* right: order panel */}
-      <aside className="w-[320px] shrink-0 border-l border-border/50 flex flex-col bg-white/[0.02]">
+      <aside className="w-[320px] shrink-0 border-l border-border/50 dark:border dark:border-white/50 flex flex-col bg-white/[0.02]">
         {/* Sidebar tabs */}
-        <div className="flex border-b border-border/50 shrink-0">
+        <div className="flex border-b border-border/50 dark:border-b dark:border-white/50 divide-x divide-border/50 dark:divide-white/50 shrink-0">
           <button
             onClick={() => setSidebarTab("order")}
             className={`flex-1 px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
@@ -574,7 +574,7 @@ export default function WaiterView() {
                 <p className="text-muted-foreground text-sm">{t("waiter.orderEmpty")}</p>
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto divide-y divide-border/30">
+              <div className="flex-1 overflow-y-auto divide-y divide-border/30 dark:divide-white/50">
                 {orderLines.map((line) => (
                   <div key={line.uid} className="px-5 py-3 group">
                     <div className="flex items-start justify-between gap-2">
@@ -611,14 +611,14 @@ export default function WaiterView() {
             )}
 
             {orderLines.length > 0 && (
-              <div className="px-5 py-2 border-t border-border/30 shrink-0">
+              <div className="px-5 py-2 border-t border-border/30 dark:border-t dark:border-white/50 shrink-0">
                 <p className="text-xs text-muted-foreground mb-2">{t("waiter.orderType")}</p>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setIsTakeaway(false)}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                      !isTakeaway ? "bg-primary/20 text-primary border border-primary/40" : "bg-white/5 text-muted-foreground border border-transparent hover:bg-white/10"
+                      !isTakeaway ? "bg-primary/20 text-primary border border-primary/40" : "bg-white/5 text-muted-foreground border border-transparent dark:border dark:border-white/50 hover:bg-white/10"
                     }`}
                   >
                     {t("waiter.dineIn")}
@@ -627,7 +627,7 @@ export default function WaiterView() {
                     type="button"
                     onClick={() => setIsTakeaway(true)}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                      isTakeaway ? "bg-primary/20 text-primary border border-primary/40" : "bg-white/5 text-muted-foreground border border-transparent hover:bg-white/10"
+                      isTakeaway ? "bg-primary/20 text-primary border border-primary/40" : "bg-white/5 text-muted-foreground border border-transparent dark:border dark:border-white/50 hover:bg-white/10"
                     }`}
                   >
                     {t("waiter.takeaway")}
@@ -636,7 +636,7 @@ export default function WaiterView() {
               </div>
             )}
 
-            <div className="border-t border-border/50 px-5 py-4 shrink-0 space-y-3">
+            <div className="border-t border-border/50 dark:border-t dark:border-white/50 px-5 py-4 shrink-0 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{t("common.total")}</span>
                 <span className="text-lg font-semibold text-foreground">
@@ -649,7 +649,7 @@ export default function WaiterView() {
                 className={`w-full flex items-center justify-center gap-2 rounded-lg py-3 font-semibold text-sm ${
                   orderLines.length > 0
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-primary/40 text-primary-foreground/60 cursor-not-allowed"
+                    : "bg-primary/40 text-primary-foreground/60 cursor-not-allowed dark:border dark:border-white/50"
                 }`}
               >
                 <Send className="h-4 w-4" />
@@ -667,7 +667,7 @@ export default function WaiterView() {
             ) : (
               <div className="flex-1 overflow-y-auto">
                 {gatavsOrders.length > 0 && (
-                  <div className="border-b border-border/30">
+                  <div className="border-b border-border/30 dark:border-b dark:border-white/50">
                     <div className="px-4 py-2 bg-emerald-500/5 shrink-0 flex items-center gap-2">
                       <span className="font-display font-bold text-xs text-emerald-400">
                         {t("kitchen.gatavs")}
@@ -682,7 +682,7 @@ export default function WaiterView() {
                         const hasPager = order.pagerNumber != null && order.pagerNumber >= 1 && order.pagerNumber <= 16;
                         const showGatavs = hasPager && !pagerCalled;
                         return (
-                          <div key={order.id} className="px-5 py-4 space-y-3 rounded-lg border-2 border-emerald-500/50 bg-card/80 shadow-sm">
+                          <div key={order.id} className="px-5 py-4 space-y-3 rounded-lg border border-emerald-500/50 dark:border-emerald-400/60 bg-card/80 shadow-sm">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium text-muted-foreground truncate">#{order.receiptOrderNumber ?? order.id}</span>
                               <div className="flex items-center gap-2 shrink-0">
@@ -710,8 +710,8 @@ export default function WaiterView() {
                                 onClick={() => showGatavs && markAsGatavs(order)}
                                 className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold ${
                                   showGatavs
-                                    ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                                    : "bg-muted/20 text-muted-foreground cursor-not-allowed"
+                                    ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 dark:border dark:border-emerald-400/60"
+                                    : "bg-muted/20 text-muted-foreground cursor-not-allowed dark:border dark:border-white/50"
                                 }`}
                               >
                                 <Hash className="h-4 w-4" />
@@ -719,7 +719,7 @@ export default function WaiterView() {
                               </button>
                               <button
                                 onClick={() => markAsAtdotsKlientam(order.id, order.status)}
-                                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors dark:border dark:border-primary/60"
                               >
                                 <UserCheck className="h-4 w-4" />
                                 {t("waiter.atdotsKlientam")}
@@ -750,7 +750,7 @@ export default function WaiterView() {
                       {gatavojasOrders.map((order) => {
                         const hasPager = order.pagerNumber != null && order.pagerNumber >= 1 && order.pagerNumber <= 16;
                         return (
-                          <div key={order.id} className="px-5 py-4 space-y-3 rounded-lg border-2 border-orange-500/50 bg-card/80 shadow-sm">
+                          <div key={order.id} className="px-5 py-4 space-y-3 rounded-lg border border-orange-500/50 dark:border-orange-400/60 bg-card/80 shadow-sm">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium text-muted-foreground truncate">#{order.receiptOrderNumber ?? order.id}</span>
                               <div className="flex items-center gap-2 shrink-0">
@@ -775,14 +775,14 @@ export default function WaiterView() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => markAsGatavs(order)}
-                                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors dark:border dark:border-emerald-400/60"
                               >
                                 <Hash className="h-4 w-4" />
                                 {t("waiter.gatavs")}
                               </button>
                               <button
                                 disabled
-                                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold bg-muted/20 text-muted-foreground cursor-not-allowed"
+                                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold bg-muted/20 text-muted-foreground cursor-not-allowed dark:border dark:border-white/50"
                               >
                                 <UserCheck className="h-4 w-4" />
                                 {t("waiter.atdotsKlientam")}
@@ -807,7 +807,7 @@ export default function WaiterView() {
 
       {showConfirm && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
-          <div className="bg-background border border-border/50 rounded-xl p-6 w-full max-w-[440px] space-y-4">
+          <div className="bg-background border border-border/50 dark:border dark:border-white/50 rounded-xl p-6 w-full max-w-[440px] space-y-4">
             <h3 className="text-lg font-display font-bold text-foreground">
               {t("waiter.confirmSend")}
             </h3>
@@ -820,7 +820,7 @@ export default function WaiterView() {
                     className={`w-16 h-16 rounded-lg text-xl font-semibold transition-colors flex items-center justify-center ${
                       selectedPager === null
                         ? "bg-primary text-primary-foreground"
-                        : "border border-border/50 bg-white/5 hover:bg-white/10 active:bg-white/15"
+                        : "border border-border/50 dark:border dark:border-white/50 bg-white/5 hover:bg-white/10 active:bg-white/15"
                     }`}
                   >
                     –
@@ -836,8 +836,8 @@ export default function WaiterView() {
                           selectedPager === n
                             ? "bg-primary text-primary-foreground"
                             : used
-                              ? "bg-muted/30 text-muted-foreground cursor-not-allowed"
-                              : "border border-border/50 bg-white/5 hover:bg-white/10 active:bg-white/15"
+                              ? "bg-muted/30 text-muted-foreground cursor-not-allowed border border-border/50 dark:border dark:border-white/50"
+                              : "border border-border/50 dark:border dark:border-white/50 bg-white/5 hover:bg-white/10 active:bg-white/15"
                         }`}
                       >
                         {n}
@@ -850,7 +850,7 @@ export default function WaiterView() {
             <div className="flex gap-3">
               <button
                 onClick={() => { setShowConfirm(false); setSelectedPager(null); }}
-                className="flex-1 rounded-lg border border-border/50 py-2.5 text-sm font-medium text-foreground hover:bg-white/5 transition-colors"
+                className="flex-1 rounded-lg border border-border/50 dark:border dark:border-white/50 py-2.5 text-sm font-medium text-foreground hover:bg-white/5 transition-colors"
               >
                 {t("common.cancel")}
               </button>
@@ -998,7 +998,7 @@ function TimeTrackingModal({
   };
   const doPauseForUser = async (row: ActiveSessionRow) => {
     if (verifiedUserId !== row.userId || code.length !== 4) {
-      toast({ title: t("common.error"), description: "Ievadiet darbinieka kodu", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("timeTrackingModal.enterCode"), variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -1021,7 +1021,7 @@ function TimeTrackingModal({
   };
   const doResumeForUser = async (row: ActiveSessionRow) => {
     if (verifiedUserId !== row.userId || code.length !== 4) {
-      toast({ title: t("common.error"), description: "Ievadiet darbinieka kodu", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("timeTrackingModal.enterCode"), variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -1044,7 +1044,7 @@ function TimeTrackingModal({
   };
   const doEndForUser = async (row: ActiveSessionRow) => {
     if (verifiedUserId !== row.userId || code.length !== 4) {
-      toast({ title: t("common.error"), description: "Ievadiet darbinieka kodu", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("timeTrackingModal.enterCode"), variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -1068,7 +1068,7 @@ function TimeTrackingModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="rounded-2xl w-full max-w-xl p-6 shadow-xl bg-card border border-border/50 max-h-[90vh] flex flex-col min-w-[380px]">
+      <div className="rounded-2xl w-full max-w-xl p-6 shadow-xl bg-card border border-border/50 dark:border dark:border-white/50 shadow-black/30 max-h-[90vh] flex flex-col min-w-[380px]">
         <div className="flex items-center justify-between mb-4 shrink-0">
           <h2 className="text-xl font-display font-bold">{t("timeTrackingModal.title")}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -1086,7 +1086,7 @@ function TimeTrackingModal({
                 return (
                   <div
                     key={row.id}
-                    className="flex items-center gap-2 rounded-lg border border-border/50 bg-white/5 px-3 py-2.5"
+                    className="flex items-center gap-2 rounded-lg border border-border/50 dark:border dark:border-white/50 bg-white/5 px-3 py-2.5"
                   >
                     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                       <span className="font-medium truncate">{name}</span>
@@ -1119,7 +1119,7 @@ function TimeTrackingModal({
                       <button
                         onClick={() => doEndForUser(row)}
                         disabled={loading || !canAct}
-                        className="px-3 py-1.5 rounded-lg border border-border/50 bg-white/5 text-sm font-medium hover:bg-white/10 disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-lg border border-border/50 dark:border dark:border-white/50 bg-white/5 text-sm font-medium hover:bg-white/10 disabled:opacity-50"
                       >
                         {t("timeTrackingModal.end")}
                       </button>
@@ -1140,7 +1140,7 @@ function TimeTrackingModal({
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 placeholder={t("timeTrackingModal.codePlaceholder")}
-                className="flex-1 px-3 py-2 rounded-lg border border-border/50 bg-black/20"
+                className="flex-1 px-3 py-2 rounded-lg border border-border/50 dark:border dark:border-white/50 bg-white/5 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
               <button
                 onClick={doStart}
@@ -1152,10 +1152,10 @@ function TimeTrackingModal({
             </div>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-border/50 shrink-0">
+        <div className="mt-4 pt-4 border-t border-border/50 dark:border-t dark:border-white/50 shrink-0">
           <button
             onClick={onClose}
-            className="w-full py-2 rounded-lg border border-border/50 bg-white/5 text-sm font-medium hover:bg-white/10"
+            className="w-full py-2 rounded-lg border border-border/50 dark:border dark:border-white/50 bg-white/5 text-sm font-medium hover:bg-white/10 dark:hover:border-white/60"
           >
             {t("timeTrackingModal.close")}
           </button>

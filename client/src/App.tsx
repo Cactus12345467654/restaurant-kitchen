@@ -21,6 +21,8 @@ import KitchenView from "./pages/KitchenView";
 import Modifiers from "./pages/Modifiers";
 import StatisticsLanding from "./pages/StatisticsLanding";
 import StatisticsView from "./pages/StatisticsView";
+import OrderNumberDisplayLanding from "./pages/OrderNumberDisplayLanding";
+import OrderNumberDisplayView from "./pages/OrderNumberDisplayView";
 import Waiter from "./pages/Waiter";
 import WaiterView from "./pages/WaiterView";
 import TimeTracking from "./pages/TimeTracking";
@@ -52,6 +54,8 @@ function App() {
                 <Route path="/kitchen" component={Kitchen} />
                 <Route path="/statistics/view" component={StatisticsView} />
                 <Route path="/statistics" component={StatisticsLanding} />
+                <Route path="/order-numbers/view" component={OrderNumberDisplayView} />
+                <Route path="/order-numbers" component={OrderNumberDisplayLanding} />
                 <Route path="/" component={Dashboard} />
                 <Route component={NotFound} />
               </Switch>

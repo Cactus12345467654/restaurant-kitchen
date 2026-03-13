@@ -29,7 +29,7 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const { data: locations } = useLocations();
 
-  const assignedLocationId = user?.locationId ?? null;
+  const assignedLocationId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
   const isSuperAdmin = hasRole(user, "super_admin");
   const showLocationSelector = canSelectLocation(user);
 
@@ -139,7 +139,7 @@ export default function Dashboard() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Waiter workspace */}
-            <Card className="p-6 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+            <Card className="p-6 bg-card border-border/50 dark:border-white/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                 <ConciergeBell className="w-16 h-16 text-primary" />
               </div>
@@ -169,7 +169,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Kitchen workspace */}
-            <Card className="p-6 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+            <Card className="p-6 bg-card border-border/50 dark:border-white/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                 <ChefHat className="w-16 h-16 text-orange-500" />
               </div>
@@ -203,7 +203,7 @@ export default function Dashboard() {
             {t("dashboard.statistics")}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="p-5 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+            <Card className="p-5 bg-card border-border/50 dark:border-white/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <ShoppingBag className="w-12 h-12 text-blue-500" />
               </div>
@@ -217,7 +217,7 @@ export default function Dashboard() {
               </div>
             </Card>
 
-            <Card className="p-5 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+            <Card className="p-5 bg-card border-border/50 dark:border-white/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <CalendarDays className="w-12 h-12 text-orange-500" />
               </div>
@@ -231,7 +231,7 @@ export default function Dashboard() {
               </div>
             </Card>
 
-            <Card className="p-5 bg-card border-border/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
+            <Card className="p-5 bg-card border-border/50 dark:border-white/50 shadow-lg shadow-black/5 rounded-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <TrendingUp className="w-12 h-12 text-emerald-500" />
               </div>

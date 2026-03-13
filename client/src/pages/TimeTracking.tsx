@@ -46,7 +46,7 @@ export default function TimeTracking() {
   const { t } = useTranslation();
   const isSuperAdmin = hasRole(user, "super_admin");
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    isSuperAdmin ? null : (user?.locationId ?? null)
+    isSuperAdmin ? null : (user?.locationId ?? (user as { location_id?: number })?.location_id ?? null),
   );
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -57,10 +57,13 @@ export default function TimeTracking() {
   const { data: entries = [] } = useTimeEntries(selectedLocationId, year, month);
 
   useEffect(() => {
+    const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
     if (isSuperAdmin && locations.length > 0 && selectedLocationId == null) {
       setSelectedLocationId(locations[0].id);
+    } else if (!isSuperAdmin && userLocId != null && !selectedLocationId) {
+      setSelectedLocationId(userLocId);
     }
-  }, [isSuperAdmin, locations, selectedLocationId]);
+  }, [isSuperAdmin, locations, selectedLocationId, user]);
 
   const employees = users.filter((u) => {
     if (!u.locationId || u.locationId !== selectedLocationId) return false;
@@ -130,7 +133,7 @@ export default function TimeTracking() {
                 value={selectedLocationId != null ? String(selectedLocationId) : ""}
                 onValueChange={(val) => setSelectedLocationId(Number(val))}
               >
-                <SelectTrigger className="w-[200px] bg-black/20 border-border/50">
+                <SelectTrigger className="w-[200px] bg-black/20 border-border/50 dark:border-white/50">
                   <SelectValue placeholder={t("timeTracking.selectLocation")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,7 +149,7 @@ export default function TimeTracking() {
               value={String(month)}
               onValueChange={(val) => setMonth(Number(val))}
             >
-              <SelectTrigger className="w-[160px] bg-black/20 border-border/50">
+              <SelectTrigger className="w-[160px] bg-black/20 border-border/50 dark:border-white/50">
                 <SelectValue placeholder={t("timeTracking.selectMonth")} />
               </SelectTrigger>
               <SelectContent>
@@ -161,7 +164,7 @@ export default function TimeTracking() {
               value={String(year)}
               onValueChange={(val) => setYear(Number(val))}
             >
-              <SelectTrigger className="w-[120px] bg-black/20 border-border/50">
+              <SelectTrigger className="w-[120px] bg-black/20 border-border/50 dark:border-white/50">
                 <SelectValue placeholder={t("timeTracking.selectYear")} />
               </SelectTrigger>
               <SelectContent>
@@ -181,17 +184,17 @@ export default function TimeTracking() {
             <p className="text-sm">{t("common.loading")}</p>
           </div>
         ) : employees.length === 0 ? (
-          <Card className="p-8 border-border/50">
+          <Card className="p-8 border-border/50 dark:border-white/50">
             <p className="text-muted-foreground text-center">
               {t("timeTracking.noEmployees")}
             </p>
           </Card>
         ) : (
-          <Card className="border-border/50 overflow-hidden">
+          <Card className="border-border/50 dark:border-white/50 overflow-hidden">
             <div className="overflow-x-auto">
               <Table className="text-xs">
                 <TableHeader>
-                  <TableRow className="border-border/50 hover:bg-transparent">
+                  <TableRow className="border-border/50 dark:border-white/50 hover:bg-transparent">
                     <TableHead className="min-w-[100px] h-8 px-2 py-1.5 font-semibold text-muted-foreground sticky left-0 bg-card z-10">
                       {t("common.name")}
                     </TableHead>
@@ -214,7 +217,7 @@ export default function TimeTracking() {
                   {employees.map((emp) => (
                     <TableRow
                       key={emp.id}
-                      className="border-border/50 hover:bg-white/5"
+                      className="border-border/50 dark:border-white/50 hover:bg-white/5"
                     >
                       <TableCell className="px-2 py-1.5 font-medium text-foreground sticky left-0 bg-card z-10">
                         {formatDisplayName(emp.username)}
@@ -239,7 +242,7 @@ export default function TimeTracking() {
                   ))}
                 </TableBody>
                 <TableFooter>
-                  <TableRow className="border-border/50 bg-muted/30 font-medium">
+                  <TableRow className="border-border/50 dark:border-white/50 bg-muted/30 font-medium">
                     <TableCell className="px-2 py-1.5 sticky left-0 bg-muted/50 z-10">
                       {t("timeTracking.total")}
                     </TableCell>

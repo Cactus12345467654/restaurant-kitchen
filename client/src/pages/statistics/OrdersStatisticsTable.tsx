@@ -34,16 +34,6 @@ export interface OrderStatisticsRow {
 
 const FALLBACK = "-";
 
-function formatStatus(status: string): string {
-  const map: Record<string, string> = {
-    gatavojas: "Gatavojas",
-    gatavs: "Gatavs",
-    izsaukts: "Izsaukts",
-    atdots_klientam: "Atdots klientam",
-  };
-  return map[status] ?? status;
-}
-
 /** Order total: use totalPriceCents (cart total when sent to kitchen). Legacy: totalPrice if in cents. */
 function getOrderTotalCents(order: SharedOrder): number | null {
   const c = order.totalPriceCents;
@@ -119,7 +109,7 @@ export function mapOrderToStatisticsRow(
     costPrice: FALLBACK,
     balanceTotal: FALLBACK,
     location: _locationName ?? FALLBACK,
-    status: formatStatus(order.status),
+    status: order.status,
     pagerNumber: order.pagerNumber != null ? String(order.pagerNumber) : FALLBACK,
     isTakeaway: order.isTakeaway === true,
   };
@@ -145,7 +135,7 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
 
   return (
     <div className="space-y-3">
-      <div className="max-h-[calc(100vh-380px)] overflow-auto rounded-xl border border-border/50 bg-card/30">
+      <div className="max-h-[calc(100vh-380px)] overflow-auto rounded-xl border border-border/50 dark:border dark:border-white/50 bg-card/30">
         <Table>
           <TableHeader className="sticky top-0 z-20 bg-muted/90 backdrop-blur">
             <TableRow className="border-border/50 hover:bg-transparent h-8">
@@ -181,7 +171,7 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
             rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="border-border/30 hover:bg-muted/20 h-9"
+                className="border-border/30 dark:border-white/50 hover:bg-muted/20 h-9"
               >
                 <TableCell className="sticky left-0 z-10 bg-card/80 font-medium text-xs px-2 py-1.5">
                   {row.orderNumber}
@@ -219,7 +209,7 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
     </div>
 
     {pagination && (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/50 bg-card/30 px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/50 dark:border dark:border-white/50 bg-card/30 px-4 py-2">
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">
             {t("statsOrders.rowsPerPage")}

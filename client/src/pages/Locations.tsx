@@ -120,13 +120,13 @@ export default function Locations() {
           </Button>
         </div>
 
-        <Card className="border-border/50 bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/5">
+        <Card className="border-border/50 dark:border-white/50 bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/5">
           {isLoading ? (
             <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
           ) : (
             <Table>
               <TableHeader className="bg-white/5">
-                <TableRow className="border-border/50 hover:bg-transparent">
+                <TableRow className="border-border/50 dark:border-white/50 hover:bg-transparent">
                   <TableHead className="w-10 font-semibold text-muted-foreground"></TableHead>
                   <TableHead className="font-semibold text-muted-foreground">{t("common.name")}</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">{t("locations.address")}</TableHead>
@@ -150,7 +150,7 @@ export default function Locations() {
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, loc.id)}
                     onDragEnd={handleDragEnd}
-                    className={`border-border/50 hover:bg-white/5 transition-colors cursor-grab active:cursor-grabbing ${draggedId === loc.id ? "opacity-50" : ""}`}
+                    className={`border-border/50 dark:border-white/50 hover:bg-white/5 transition-colors cursor-grab active:cursor-grabbing ${draggedId === loc.id ? "opacity-50" : ""}`}
                   >
                     <TableCell className="w-10 py-2">
                       <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -189,7 +189,7 @@ export default function Locations() {
         </Card>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md bg-card border-border/50 rounded-2xl">
+          <DialogContent className="sm:max-w-md bg-card border-border/50 dark:border-white/50 rounded-2xl">
             <DialogHeader>
               <DialogTitle className="font-display text-xl">{editingId ? t("locations.editLocation") : t("locations.addNew")}</DialogTitle>
             </DialogHeader>
@@ -201,7 +201,7 @@ export default function Locations() {
                   onChange={(e) => setFormData({...formData, name: e.target.value})} 
                   placeholder={t("locations.locationNamePlaceholder")}
                   required
-                  className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
+                  className="bg-black/20 border-border/50 dark:border-white/50 focus:border-primary rounded-xl h-11"
                 />
               </div>
               <div className="space-y-2">
@@ -211,7 +211,7 @@ export default function Locations() {
                   onChange={(e) => setFormData({...formData, address: e.target.value})} 
                   placeholder={t("locations.addressPlaceholder")}
                   required
-                  className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
+                  className="bg-black/20 border-border/50 dark:border-white/50 focus:border-primary rounded-xl h-11"
                 />
               </div>
               <div className="pt-4 flex justify-end gap-2">
@@ -226,7 +226,7 @@ export default function Locations() {
         </Dialog>
 
         <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-          <AlertDialogContent className="bg-card border-border/50 rounded-2xl">
+          <AlertDialogContent className="bg-card border-border/50 dark:border-white/50 rounded-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle>{t("locations.deleteLocation")}</AlertDialogTitle>
               <AlertDialogDescription>

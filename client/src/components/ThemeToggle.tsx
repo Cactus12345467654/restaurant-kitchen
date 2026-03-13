@@ -14,7 +14,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      className="text-muted-foreground hover:text-foreground hover:bg-muted/50"
+      className="border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 dark:border-white/50"
       aria-label={theme === "dark" ? "Pārslēgt uz light mode" : "Pārslēgt uz dark mode"}
     >
       {theme === "dark" ? (

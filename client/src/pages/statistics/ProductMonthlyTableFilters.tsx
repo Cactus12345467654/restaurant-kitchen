@@ -102,7 +102,7 @@ export function ProductMonthlyTableFilters({
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/30 p-4">
+    <div className="rounded-xl border border-border/50 dark:border dark:border-white/50 bg-card/30 p-4">
       <p className="text-sm font-medium text-muted-foreground mb-4">
         {t("tableReport.filtersTitle")}
       </p>

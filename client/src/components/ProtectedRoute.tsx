@@ -20,13 +20,13 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       const userRoles = Array.isArray(user.roles) ? user.roles : ((user as any).role ? [(user as any).role] : []);
       const hasAccess = allowedRoles.some((r) => userRoles.includes(r));
       if (!hasAccess) {
-      if (userRoles.includes('kitchen_staff')) {
-        setLocation("/kitchen");
-      } else if (userRoles.includes('waiter')) {
-        setLocation("/waiter");
-      } else {
-        setLocation("/");
-      }
+        if (userRoles.includes('kitchen_staff')) {
+          setLocation("/kitchen");
+        } else if (userRoles.includes('waiter')) {
+          setLocation("/waiter");
+        } else {
+          setLocation("/");
+        }
       }
     }
   }, [user, isLoading, setLocation, allowedRoles]);

@@ -10,7 +10,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex h-screen w-full bg-background overflow-hidden">
         <AppSidebar />
         <div className="flex flex-col flex-1 w-full min-w-0">
-          <header className="flex h-16 items-center justify-between px-6 border-b border-border/50 bg-card/50 backdrop-blur-sm z-10 shrink-0">
+          <header className="flex h-16 items-center justify-between px-6 border-b border-border/50 dark:border-b dark:border-white/50 bg-card/50 backdrop-blur-sm z-10 shrink-0">
             <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
             <div className="flex items-center gap-3">
               <LanguageSwitcher />

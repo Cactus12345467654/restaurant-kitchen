@@ -13,7 +13,7 @@ import { ProductMonthlyTableReport } from "./statistics/ProductMonthlyTableRepor
 function StatsProductsTab() {
   const { t } = useTranslation();
   return (
-    <Card className="p-8 bg-card border-border/50 rounded-2xl">
+    <Card className="p-8 bg-card border-border/50 dark:border-white/50 rounded-2xl">
       <h2 className="text-xl font-display font-semibold text-foreground">
         {t("stats.tabProducts")}
       </h2>
@@ -24,7 +24,7 @@ function StatsProductsTab() {
 function StatsModifiersTab() {
   const { t } = useTranslation();
   return (
-    <Card className="p-8 bg-card border-border/50 rounded-2xl">
+    <Card className="p-8 bg-card border-border/50 dark:border-white/50 rounded-2xl">
       <h2 className="text-xl font-display font-semibold text-foreground">
         {t("stats.tabModifiers")}
       </h2>
@@ -41,7 +41,7 @@ export default function StatisticsView() {
 
   const params = new URLSearchParams(window.location.search);
   const paramLocationId = Number(params.get("locationId")) || null;
-  const locationId = paramLocationId ?? user?.locationId ?? null;
+  const locationId = paramLocationId ?? user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
   const locationName = locations?.find((l) => l.id === locationId)?.name;
 
   if (!locationId) {
@@ -57,7 +57,7 @@ export default function StatisticsView() {
 
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
-      <header className="border-b border-border/50 px-4 py-2.5 flex items-center justify-between shrink-0 bg-card/50 backdrop-blur-sm">
+      <header className="border-b border-border/50 dark:border-b dark:border-white/50 dark:border-white/50 px-4 py-2.5 flex items-center justify-between shrink-0 bg-card/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2.5">
             <BarChart3 className="w-5 h-5 text-primary" />
@@ -79,7 +79,7 @@ export default function StatisticsView() {
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-[1600px] mx-auto w-full">
           <Tabs defaultValue="orders" className="w-full">
-            <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1 bg-muted/50 border border-border/50 rounded-xl">
+            <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1 bg-muted/50 border border-border/50 dark:border dark:border-white/50 dark:border-white/50 rounded-xl">
               <TabsTrigger
                 value="orders"
                 className="rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary"

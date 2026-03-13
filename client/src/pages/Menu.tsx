@@ -103,7 +103,7 @@ function ModifierOptionForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-3 p-3 bg-black/40 rounded-lg border border-border/30 space-y-3 animate-in fade-in zoom-in-95 duration-200"
+      className="mt-3 p-3 bg-black/40 rounded-lg border border-border/30 dark:border dark:border-white/50 space-y-3 animate-in fade-in zoom-in-95 duration-200"
     >
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
@@ -115,7 +115,7 @@ function ModifierOptionForm({
             onChange={(e) => setName(e.target.value)}
             placeholder={t("modifiers.optionNamePlaceholder")}
             autoFocus
-            className="h-8 text-xs bg-black/20 border-border/50"
+            className="h-8 text-xs bg-black/20 border-border/50 dark:border-white/50"
           />
         </div>
         <div className="space-y-1">
@@ -127,7 +127,7 @@ function ModifierOptionForm({
             step="0.01"
             value={priceDeltaStr}
             onChange={(e) => setPriceDeltaStr(e.target.value)}
-            className="h-8 text-xs bg-black/20 border-border/50"
+            className="h-8 text-xs bg-black/20 border-border/50 dark:border-white/50"
           />
         </div>
       </div>
@@ -361,7 +361,7 @@ function ManageModifiersModal({
         }
       }}
     >
-      <DialogContent className="sm:max-w-2xl w-[95vw] bg-card border-border/50 rounded-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-2xl w-[95vw] bg-card border-border/50 dark:border-white/50 rounded-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <div className="flex justify-between items-center pr-6">
             <DialogTitle className="font-display text-xl text-foreground">
@@ -378,7 +378,7 @@ function ManageModifiersModal({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto pr-2 mt-4 space-y-4">
-          <div className="sticky top-0 bg-card pb-2 border-b border-border/50 z-10">
+          <div className="sticky top-0 bg-card pb-2 border-b border-border/50 dark:border-b dark:border-white/50 z-10">
             <p className="font-medium text-foreground">{itemName}</p>
           </div>
 
@@ -393,7 +393,7 @@ function ManageModifiersModal({
                       onChange={(e) => setNewGroupName(e.target.value)}
                       placeholder={t("modifiers.groupNamePlaceholder")}
                       autoFocus
-                      className="bg-black/20 border-border/50 h-10 text-sm rounded-lg flex-1"
+                      className="bg-black/20 border-border/50 dark:border-white/50 h-10 text-sm rounded-lg flex-1"
                     />
                     <Button
                       type="submit"
@@ -412,12 +412,12 @@ function ManageModifiersModal({
                 </form>
 
                 {locationGroups.length > 0 && (
-                  <div className="space-y-3 pt-3 border-t border-border/50">
+                  <div className="space-y-3 pt-3 border-t border-border/50 dark:border-t dark:border-white/50">
                     <Label className="text-sm font-medium text-foreground">{t("modifiers.existingGroups")}</Label>
                     <p className="text-xs text-muted-foreground">
                       {t("modifiers.existingGroupsHint")}
                     </p>
-                    <ul className="space-y-2 max-h-48 overflow-y-auto rounded-lg bg-black/20 p-3 border border-border/30">
+                    <ul className="space-y-2 max-h-48 overflow-y-auto rounded-lg bg-black/20 p-3 border border-border/30 dark:border dark:border-white/50">
                       {locationGroups.map((g: any) => {
                         const isAttached = attachedGroupIds.has(g.id);
                         return (
@@ -495,7 +495,7 @@ function ManageModifiersModal({
                 return (
                   <Card
                     key={group.id}
-                    className="bg-black/20 border-border/50 hover:border-border transition-colors group"
+                    className="bg-black/20 border-border/50 dark:border-white/50 hover:border-border transition-colors group"
                   >
                     <CardContent className="p-4 relative">
                       <DropdownMenu>
@@ -534,7 +534,7 @@ function ManageModifiersModal({
                           variant="ghost"
                           size="sm"
                           onClick={() => setAddingOptionGroupId(group.id)}
-                          className="h-7 text-[10px] px-2 border border-border/30 hover:bg-primary/10 shrink-0"
+                          className="h-7 text-[10px] px-2 border border-border/30 dark:border dark:border-white/50 hover:bg-primary/10 shrink-0"
                         >
                           <Plus className="w-3 h-3 mr-1" /> {t("modifiers.addOption")}
                         </Button>
@@ -608,7 +608,7 @@ function ManageModifiersModal({
                           editingOptionId === option.id ? (
                             <div
                               key={option.id}
-                              className="mt-3 p-3 bg-black/40 rounded-lg border border-border/30 space-y-3 animate-in fade-in zoom-in-95 duration-200"
+                              className="mt-3 p-3 bg-black/40 rounded-lg border border-border/30 dark:border dark:border-white/50 space-y-3 animate-in fade-in zoom-in-95 duration-200"
                             >
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-1">
@@ -619,7 +619,7 @@ function ManageModifiersModal({
                                     value={editOptionName}
                                     onChange={(e) => setEditOptionName(e.target.value)}
                                     placeholder={t("modifiers.optionNamePlaceholder")}
-                                    className="h-8 text-xs bg-black/20 border-border/50"
+                                    className="h-8 text-xs bg-black/20 border-border/50 dark:border-white/50"
                                   />
                                 </div>
                                 <div className="space-y-1">
@@ -631,7 +631,7 @@ function ManageModifiersModal({
                                     step="0.01"
                                     value={editOptionPriceStr}
                                     onChange={(e) => setEditOptionPriceStr(e.target.value)}
-                                    className="h-8 text-xs bg-black/20 border-border/50"
+                                    className="h-8 text-xs bg-black/20 border-border/50 dark:border-white/50"
                                   />
                                 </div>
                               </div>
@@ -817,7 +817,7 @@ function ManageModifiersModal({
             </div>
           )}
         </div>
-        <div className="pt-4 flex justify-end border-t border-border/50 mt-4">
+        <div className="pt-4 flex justify-end border-t border-border/50 dark:border-t dark:border-white/50 mt-4">
           <Button onClick={onClose} className="rounded-xl">
             {t("common.save")}
           </Button>
@@ -876,7 +876,7 @@ function MenuItemPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-card border-border/50 rounded-2xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-md bg-card border-border/50 dark:border-white/50 rounded-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-display text-xl text-foreground">
             {t("preview.title")}
@@ -886,10 +886,10 @@ function MenuItemPreviewModal({
               <img
                 src={resolveImageUrl({ imageUrl })!}
                 alt=""
-                className="w-full max-w-[200px] h-[150px] object-cover rounded-xl border border-border/50 bg-black/20"
+                className="w-full max-w-[200px] h-[150px] object-cover rounded-xl border border-border/50 dark:border dark:border-white/50 bg-black/20"
               />
             ) : (
-              <div className="w-full max-w-[200px] h-[150px] rounded-xl border border-border/50 bg-white/5 flex items-center justify-center">
+              <div className="w-full max-w-[200px] h-[150px] rounded-xl border border-border/50 dark:border dark:border-white/50 bg-white/5 flex items-center justify-center">
                 <span className="text-muted-foreground text-lg">—</span>
               </div>
             )}
@@ -911,7 +911,7 @@ function MenuItemPreviewModal({
               return (
                 <div
                   key={group.id}
-                  className="space-y-2 pb-4 border-b border-border/30 last:border-0"
+                  className="space-y-2 pb-4 border-b border-border/30 dark:border-b dark:border-white/50 last:border-0"
                 >
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     {t("preview.step")} {stepIndex + 1}
@@ -928,7 +928,7 @@ function MenuItemPreviewModal({
                         className={
                           selectedId === option.id
                             ? "rounded-lg border-primary bg-primary/90 text-primary-foreground"
-                            : "rounded-lg border-border/50 bg-black/20 hover:bg-white/10 text-foreground"
+                            : "rounded-lg border-border/50 dark:border-white/50 bg-black/20 hover:bg-white/10 text-foreground"
                         }
                       >
                         {option.name}
@@ -946,7 +946,7 @@ function MenuItemPreviewModal({
           )}
         </div>
 
-        <div className="pt-4 flex justify-end border-t border-border/50 mt-4">
+        <div className="pt-4 flex justify-end border-t border-border/50 dark:border-t dark:border-white/50 mt-4">
           <Button onClick={onClose} variant="ghost" className="rounded-xl">
             {t("common.close")}
           </Button>
@@ -972,12 +972,15 @@ export default function Menu() {
   const { data: menuItems, isLoading, isError, refetch } = useMenuItems(selectedLocationId);
 
   useEffect(() => {
+    const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
     if (isSuperAdmin && locations?.length && !selectedLocationId) {
       setSelectedLocationId(locations[0].id);
     } else if (showLocationSelector && locations?.length && selectedLocationId == null) {
       setSelectedLocationId(locations[0].id);
+    } else if (!showLocationSelector && userLocId != null && !selectedLocationId) {
+      setSelectedLocationId(userLocId);
     }
-  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId]);
+  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId, user]);
 
   const createMutation = useCreateMenuItem(selectedLocationId);
   const updateMutation = useUpdateMenuItem(selectedLocationId);
@@ -1254,7 +1257,7 @@ export default function Menu() {
 
   const handleDeleteCategory = async (categoryName: string) => {
     if (!selectedLocationId) return;
-    if (!confirm(`Pārvietot visas pozīcijas no "${categoryName}" uz "Uncategorized"?`)) return;
+    if (!confirm(t("menu.confirmMoveItemsFromCategory").replace("{category}", categoryName).replace("{uncategorized}", t("menu.uncategorized")))) return;
     try {
       const res = await fetch(`/api/locations/${selectedLocationId}/categories/delete`, {
         method: "POST",
@@ -1330,7 +1333,7 @@ export default function Menu() {
                 value={selectedLocationId?.toString() || ""}
                 onValueChange={(val) => setSelectedLocationId(parseInt(val))}
               >
-                <SelectTrigger className="w-[200px] h-11 bg-card border-border/50 rounded-xl">
+                <SelectTrigger className="w-[200px] h-11 bg-card border-border/50 dark:border-white/50 rounded-xl">
                   <SelectValue placeholder={t("menu.selectLocation")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1404,7 +1407,7 @@ export default function Menu() {
         </div>
 
         {!selectedLocationId ? (
-          <Card className="p-12 border-border/50 bg-card rounded-2xl flex flex-col items-center justify-center text-center">
+          <Card className="p-12 border-border/50 dark:border-white/50 bg-card rounded-2xl flex flex-col items-center justify-center text-center">
             <AlertCircle className="w-12 h-12 text-muted-foreground mb-4" />
             <h3 className="text-xl font-display font-semibold">
               {t("menu.noLocation")}
@@ -1414,7 +1417,7 @@ export default function Menu() {
             </p>
           </Card>
         ) : (
-          <Card className="border-border/50 bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/5">
+          <Card className="border-border/50 dark:border-white/50 bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/5">
             {isLoading ? (
               <div className="p-12 flex justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -1422,7 +1425,7 @@ export default function Menu() {
             ) : (
               <Table>
                 <TableHeader className="bg-white/5">
-                  <TableRow className="border-border/50 hover:bg-transparent">
+                  <TableRow className="border-border/50 dark:border-white/50 hover:bg-transparent">
                     <TableHead className="font-semibold text-muted-foreground">
                       {t("menu.itemName")}
                     </TableHead>
@@ -1476,7 +1479,7 @@ export default function Menu() {
                     menuItemsByCategory.map(([category, items], catIdx) => (
                       <Fragment key={category}>
                         <TableRow
-                          className={`bg-white/5 border-border/50 hover:bg-white/10 cursor-pointer ${draggedCat === category ? "opacity-50" : ""}`}
+                          className={`bg-white/5 border-border/50 dark:border-white/50 hover:bg-white/10 cursor-pointer ${draggedCat === category ? "opacity-50" : ""}`}
                           onClick={() => toggleCategory(category)}
                           onDragOver={(e) => {
                             if (!draggedCat || draggedCat === category) return;
@@ -1549,7 +1552,7 @@ export default function Menu() {
                           items.map((item: any, itemIndex: number) => (
                             <TableRow
                               key={item.id}
-                              className={`border-border/50 hover:bg-white/5 transition-colors ${draggedItemId === item.id ? "opacity-50" : ""}`}
+                              className={`border-border/50 dark:border-white/50 hover:bg-white/5 transition-colors ${draggedItemId === item.id ? "opacity-50" : ""}`}
                               onDragOver={(e) => {
                                 if (dragCategory !== category) return;
                                 e.preventDefault();
@@ -1589,11 +1592,11 @@ export default function Menu() {
                                     <img
                                       src={resolveImageUrl(item)!}
                                       alt=""
-                                      className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-md border border-border/50 bg-black/20 shrink-0"
+                                      className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-md border border-border/50 dark:border dark:border-white/50 bg-black/20 shrink-0"
                                       onError={() => handleImgError(item.id)}
                                     />
                                   ) : (
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-md border border-border/50 bg-white/5 shrink-0 flex items-center justify-center">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-md border border-border/50 dark:border dark:border-white/50 bg-white/5 shrink-0 flex items-center justify-center">
                                       <span className="text-muted-foreground text-lg">—</span>
                                     </div>
                                   )}
@@ -1601,7 +1604,7 @@ export default function Menu() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-muted-foreground">
-                                <Badge variant="outline" className="rounded-md border-border/50 text-xs">
+                                <Badge variant="outline" className="rounded-md border-border/50 dark:border-white/50 text-xs">
                                   {item.category}
                                 </Badge>
                               </TableCell>
@@ -1612,7 +1615,7 @@ export default function Menu() {
                                 <Badge
                                   className={`rounded-md ${item.isAvailable ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20" : "bg-destructive/10 text-destructive hover:bg-destructive/20"}`}
                                 >
-                                  {item.isAvailable ? "Active" : "Inactive"}
+                                  {item.isAvailable ? t("common.active") : t("common.inactive")}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
@@ -1644,7 +1647,7 @@ export default function Menu() {
         )}
 
         <Dialog open={editCategoryName !== null} onOpenChange={(open) => !open && (setEditCategoryName(null), setEditCategoryNewName(""))}>
-          <DialogContent className="sm:max-w-sm bg-card border-border/50 rounded-2xl">
+          <DialogContent className="sm:max-w-sm bg-card border-border/50 dark:border-white/50 rounded-2xl">
             <DialogHeader>
               <DialogTitle className="font-display text-xl">{t("menu.editCategory")}</DialogTitle>
             </DialogHeader>
@@ -1654,7 +1657,7 @@ export default function Menu() {
                 value={editCategoryNewName}
                 onChange={(e) => setEditCategoryNewName(e.target.value)}
                 placeholder={t("menu.categoryNamePlaceholder")}
-                className="h-11 rounded-xl bg-black/20 border-border/50"
+                className="h-11 rounded-xl bg-black/20 border-border/50 dark:border-white/50"
               />
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => (setEditCategoryName(null), setEditCategoryNewName(""))}>
@@ -1673,7 +1676,7 @@ export default function Menu() {
         </Dialog>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md bg-card border-border/50 rounded-2xl">
+          <DialogContent className="sm:max-w-md bg-card border-border/50 dark:border-white/50 rounded-2xl">
             <DialogHeader>
               <DialogTitle className="font-display text-xl">
                 {editingId ? t("menu.editItem") : t("menu.addMenuItem")}
@@ -1689,7 +1692,7 @@ export default function Menu() {
                   }
                   placeholder={t("menu.itemNamePlaceholder")}
                   required
-                  className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
+                  className="bg-black/20 border-border/50 dark:border-white/50 focus:border-primary rounded-xl h-11"
                 />
               </div>
 
@@ -1701,10 +1704,10 @@ export default function Menu() {
                       <img
                         src={formData.imageUrl}
                         alt="Item"
-                        className="w-24 h-24 object-cover rounded-lg border border-border/50 bg-black/20"
+                        className="w-24 h-24 object-cover rounded-lg border border-border/50 dark:border dark:border-white/50 bg-black/20"
                       />
                       <div className="flex flex-col gap-2">
-                        <label className="inline-flex items-center justify-center rounded-lg h-8 px-3 text-xs border border-border/50 bg-black/20 hover:bg-white/5 cursor-pointer">
+                        <label className="inline-flex items-center justify-center rounded-lg h-8 px-3 text-xs border border-border/50 dark:border dark:border-white/50 bg-black/20 hover:bg-white/5 cursor-pointer">
                           <input
                             type="file"
                             accept="image/*"
@@ -1739,7 +1742,7 @@ export default function Menu() {
                         onChange={handleImageUpload}
                         disabled={isUploadingImage}
                       />
-                      <div className="border border-dashed border-border/50 rounded-xl h-24 flex flex-col items-center justify-center gap-0.5 bg-black/20 hover:bg-black/30 transition-colors text-muted-foreground text-sm">
+                      <div className="border border-dashed border-border/50 dark:border-white/50 rounded-xl h-24 flex flex-col items-center justify-center gap-0.5 bg-black/20 hover:bg-black/30 transition-colors text-muted-foreground text-sm">
                         {isUploadingImage ? (
                           <Loader2 className="w-6 h-6 animate-spin" />
                         ) : (
@@ -1767,7 +1770,7 @@ export default function Menu() {
                     }
                     placeholder={t("menu.pricePlaceholder")}
                     required
-                    className="bg-black/20 border-border/50 focus:border-primary rounded-xl h-11"
+                    className="bg-black/20 border-border/50 dark:border-white/50 focus:border-primary rounded-xl h-11"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1776,7 +1779,7 @@ export default function Menu() {
                     value={formData.category || "__placeholder__"}
                     onValueChange={(v) => v !== "__placeholder__" && setFormData((prev) => ({ ...prev, category: v }))}
                   >
-                    <SelectTrigger className="h-11 rounded-xl bg-black/20 border-border/50">
+                    <SelectTrigger className="h-11 rounded-xl bg-black/20 border-border/50 dark:border-white/50">
                       <SelectValue placeholder={t("menu.selectCategory")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1800,7 +1803,7 @@ export default function Menu() {
                   onChange={(e) =>
                     setFormData({ ...formData, isAvailable: e.target.checked })
                   }
-                  className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary bg-black/20"
+                  className="w-4 h-4 rounded border-border/50 dark:border-white/50 text-primary focus:ring-primary bg-black/20"
                 />
                 <Label htmlFor="isAvailable" className="cursor-pointer">
                   {t("menu.activeItem")}
@@ -1808,7 +1811,7 @@ export default function Menu() {
               </div>
 
               {editingId && (
-                <div className="pt-4 border-t border-border/50 space-y-3">
+                <div className="pt-4 border-t border-border/50 dark:border-t dark:border-white/50 space-y-3">
                   <div>
                     <h4 className="font-display font-semibold text-foreground">
                       {t("menu.modifiers")}
@@ -1845,7 +1848,7 @@ export default function Menu() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsModifiersModalOpen(true)}
-                      className="rounded-lg h-8 text-xs border-border/50 hover:bg-white/5"
+                      className="rounded-lg h-8 text-xs border-border/50 dark:border-white/50 hover:bg-white/5"
                     >
                       {t("menu.manageModifiers")}
                     </Button>
@@ -1854,7 +1857,7 @@ export default function Menu() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsPreviewModalOpen(true)}
-                      className="rounded-lg h-8 text-xs border-border/50 hover:bg-white/5"
+                      className="rounded-lg h-8 text-xs border-border/50 dark:border-white/50 hover:bg-white/5"
                     >
                       {t("menu.previewOrderFlow")}
                     </Button>

@@ -97,7 +97,7 @@ export default function Register() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="h-12 bg-black/20 border-border/50 focus:border-primary focus:ring-primary/20 transition-all rounded-xl"
+                className="h-12 bg-black/20 border-border/50 dark:border-white/50 focus:border-primary focus:ring-primary/20 transition-all rounded-xl"
               />
             </div>
 
@@ -112,7 +112,7 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 bg-black/20 border-border/50 focus:border-primary focus:ring-primary/20 transition-all rounded-xl"
+                className="h-12 bg-black/20 border-border/50 dark:border-white/50 focus:border-primary focus:ring-primary/20 transition-all rounded-xl"
               />
             </div>
 
@@ -130,7 +130,7 @@ export default function Register() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="h-12 bg-black/20 border-border/50 focus:border-primary focus:ring-primary/20 transition-all rounded-xl"
+                className="h-12 bg-black/20 border-border/50 dark:border-white/50 focus:border-primary focus:ring-primary/20 transition-all rounded-xl"
               />
             </div>
 

@@ -50,6 +50,33 @@
     --radius: 0.75rem;
   }
 
+  /* Tumšā tēma – 20% tumšāka */
+  html[data-theme="dark"] {
+    --background: 240 10% 3%;
+    --foreground: 0 0% 96%;
+    
+    --card: 240 10% 5%;
+    --card-foreground: 0 0% 96%;
+    
+    --popover: 240 10% 5%;
+    --popover-foreground: 0 0% 96%;
+    
+    --secondary: 240 10% 9%;
+    --secondary-foreground: 0 0% 96%;
+    
+    --muted: 240 10% 9%;
+    --muted-foreground: 240 5% 55%;
+    
+    --border: 240 10% 12%;
+    --input: 240 10% 12%;
+    
+    --sidebar-background: 240 10% 3%;
+    --sidebar-foreground: 240 5% 55%;
+    --sidebar-accent: 240 10% 9%;
+    --sidebar-accent-foreground: 240 5% 90%;
+    --sidebar-border: 240 10% 9%;
+  }
+
   /* Light theme overrides */
   html[data-theme="light"] {
     --background: 0 0% 98%;
@@ -98,15 +125,6 @@
     font-weight: 700;
   }
 
-  /* Biezākas kontūras dienas režīmā – labāka vizuāla nodalīšana (3px) */
-  html[data-theme="light"] .border { border-width: 3px; }
-  html[data-theme="light"] .border-b { border-bottom-width: 3px; }
-  html[data-theme="light"] .border-t { border-top-width: 3px; }
-  html[data-theme="light"] .border-l { border-left-width: 3px; }
-  html[data-theme="light"] .border-r { border-right-width: 3px; }
-  html[data-theme="light"] .border-x { border-left-width: 3px; border-right-width: 3px; }
-  html[data-theme="light"] .border-y { border-top-width: 3px; border-bottom-width: 3px; }
-
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
@@ -119,8 +137,28 @@
 }
 
 @layer utilities {
+  /* Vienots vizuālais stils visām lapām – 1px kontūras, tumšajā tēmā gaišākas */
+  .panel-border {
+    @apply border border-border/50 dark:border dark:border-white/50;
+  }
+  .panel-border-b {
+    @apply border-b border-border/50 dark:border-b dark:border-white/50;
+  }
+  .panel-border-t {
+    @apply border-t border-border/50 dark:border-t dark:border-white/50;
+  }
+  .panel-border-l {
+    @apply border-l border-border/50 dark:border-l dark:border-white/50;
+  }
+  .panel-border-r {
+    @apply border-r border-border/50 dark:border-r dark:border-white/50;
+  }
+  .panel-divide-x {
+    @apply divide-x divide-border/50 dark:divide-white/50;
+  }
+
   .glass-panel {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50 shadow-2xl shadow-black/50;
+    @apply bg-card/60 backdrop-blur-xl border border-border/50 dark:border dark:border-white/50 shadow-2xl shadow-black/50;
   }
   
   .text-gradient {

@@ -9,7 +9,8 @@ import {
   Layers,
   ConciergeBell,
   BarChart3,
-  Clock
+  Clock,
+  Hash
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/i18n";
@@ -90,12 +91,18 @@ export function AppSidebar() {
       href: "/statistics",
       roles: ["super_admin", "location_admin"],
     },
+    {
+      title: t("nav.orderNumberScreen"),
+      icon: Hash,
+      href: "/order-numbers",
+      roles: ["super_admin", "location_admin", "manager", "waiter", "kitchen_staff"],
+    },
   ];
 
   const allowedItems = navItems.filter(item => item.roles.some(r => userRoles.includes(r)));
 
   return (
-    <Sidebar variant="inset" className="border-r border-border/50">
+    <Sidebar variant="inset" className="border-r border-border/50 dark:border-r dark:border-white/50">
       <SidebarContent className="bg-card">
         <div className="p-6 pb-2">
           <h1 className="text-2xl font-bold text-gradient-primary font-display flex items-center gap-2">
@@ -137,7 +144,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="bg-card p-4 border-t border-border/50">
+      <SidebarFooter className="bg-card p-4 border-t border-border/50 dark:border-t dark:border-white/50">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3 px-2">
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-purple-400 flex items-center justify-center text-white font-bold shadow-lg shadow-primary/20">
