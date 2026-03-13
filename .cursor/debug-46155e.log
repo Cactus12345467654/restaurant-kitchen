@@ -1,0 +1,4 @@
+{"sessionId":"46155e","location":"WaiterView.tsx:sendToKitchen","message":"sendToKitchen entry","data":{"pagerMode":true,"printerMode":false,"locationId":3,"orderLinesLen":1},"hypothesisId":"H3","timestamp":1773372738963}
+{"sessionId":"46155e","location":"WaiterView.tsx:sendToKitchen","message":"sendToKitchen success","data":{},"hypothesisId":"H4","timestamp":1773372739525}
+{"sessionId":"46155e","location":"WaiterView.tsx:sendToKitchen","message":"sendToKitchen entry","data":{"pagerMode":false,"printerMode":true,"locationId":3,"orderLinesLen":2},"hypothesisId":"H3","timestamp":1773372791983}
+{"sessionId":"46155e","location":"WaiterView.tsx:sendToKitchen","message":"sendToKitchen success","data":{},"hypothesisId":"H4","timestamp":1773372794237}

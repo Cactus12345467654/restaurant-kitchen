@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMenuItems, useMenuItemModifiers } from "@/hooks/use-menu";
 import { useActiveTimeSessions } from "@/hooks/use-active-time-sessions";
-import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Radio, Clock, MapPin } from "lucide-react";
+import { Loader2, UtensilsCrossed, ArrowLeft, Check, X, ClipboardList, Send, Plus, Trash2, CheckCircle2, HandPlatter, Hash, UserCheck, Clock, MapPin } from "lucide-react";
 import { resolveImageUrl } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ import {
   buildReceiptData,
   printKitchenReceipt,
 } from "@/lib/kitchen-receipt-print";
+import { usePagerMode, usePrinterMode } from "@/hooks/use-waiter-modes";
 
 interface OrderLineModifier {
   groupName: string;
@@ -230,26 +231,6 @@ function ModifierModal({
   );
 }
 
-const PAGER_MODE_STORAGE_KEY = "waiter-pager-mode";
-
-function usePagerMode(): [boolean, (on: boolean) => void] {
-  const [pagerMode, setPagerModeState] = useState(() => {
-    try {
-      const v = localStorage.getItem(PAGER_MODE_STORAGE_KEY);
-      return v === "1" || v === "true";
-    } catch {
-      return false;
-    }
-  });
-  const setPagerMode = (on: boolean) => {
-    setPagerModeState(on);
-    try {
-      localStorage.setItem(PAGER_MODE_STORAGE_KEY, on ? "1" : "0");
-    } catch {}
-  };
-  return [pagerMode, setPagerMode];
-}
-
 type SidebarTab = "order" | "ready";
 
 const PAGER_NUMBERS = Array.from({ length: 16 }, (_, i) => i + 1);
@@ -271,7 +252,8 @@ export default function WaiterView() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("order");
   const [isTakeaway, setIsTakeaway] = useState(false);
-  const [pagerMode, setPagerMode] = usePagerMode();
+  const [pagerMode] = usePagerMode();
+  const [printerMode] = usePrinterMode();
   const [selectedPager, setSelectedPager] = useState<number | null>(null);
   const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
   const handleImgError = useCallback((id: number) => {
@@ -321,7 +303,7 @@ export default function WaiterView() {
     try {
       const receiptData = buildReceiptData(locationId, orderLines, orderTotal);
       await addOrder(locationId, items, pagerNum, orderTotal, isTakeaway, receiptData.orderNumber);
-      printKitchenReceipt(receiptData);
+      if (printerMode) printKitchenReceipt(receiptData);
       setOrderLines([]);
       setShowConfirm(false);
       setSelectedPager(null);
@@ -489,17 +471,6 @@ export default function WaiterView() {
                   ({activeSessions.map((s) => getInitials(s.username)).join(", ")})
                 </span>
               )}
-            </button>
-            <button
-              onClick={() => setPagerMode(!pagerMode)}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                pagerMode
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border/50 bg-white/5 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Radio className="h-4 w-4" />
-              {t("waiter.pagers")}: {pagerMode ? t("waiter.pagersOn") : t("waiter.pagersOff")}
             </button>
             <ThemeToggle />
             <LanguageSwitcher />
@@ -705,13 +676,13 @@ export default function WaiterView() {
                         {gatavsOrders.length}
                       </span>
                     </div>
-                    <div className="divide-y divide-border/30">
+                    <div>
                       {gatavsOrders.map((order) => {
                         const pagerCalled = order.pagerCalled === true;
                         const hasPager = order.pagerNumber != null && order.pagerNumber >= 1 && order.pagerNumber <= 16;
                         const showGatavs = hasPager && !pagerCalled;
                         return (
-                          <div key={order.id} className="px-5 py-4 space-y-3">
+                          <div key={order.id} className="px-5 py-4 space-y-3 rounded-lg border-2 border-emerald-500/50 bg-card/80 shadow-sm">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium text-muted-foreground truncate">#{order.receiptOrderNumber ?? order.id}</span>
                               <div className="flex items-center gap-2 shrink-0">
@@ -775,11 +746,11 @@ export default function WaiterView() {
                         {gatavojasOrders.length}
                       </span>
                     </div>
-                    <div className="divide-y divide-border/30">
+                    <div>
                       {gatavojasOrders.map((order) => {
                         const hasPager = order.pagerNumber != null && order.pagerNumber >= 1 && order.pagerNumber <= 16;
                         return (
-                          <div key={order.id} className="px-5 py-4 space-y-3">
+                          <div key={order.id} className="px-5 py-4 space-y-3 rounded-lg border-2 border-orange-500/50 bg-card/80 shadow-sm">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium text-muted-foreground truncate">#{order.receiptOrderNumber ?? order.id}</span>
                               <div className="flex items-center gap-2 shrink-0">

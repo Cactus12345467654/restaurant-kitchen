@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Copy, MapPin } from "lucide-react";
+import { ExternalLink, Copy, MapPin, Radio, Printer } from "lucide-react";
 import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
+import { usePagerMode, usePrinterMode } from "@/hooks/use-waiter-modes";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/i18n";
@@ -29,6 +30,8 @@ export default function Waiter() {
   }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId]);
 
   const currentLocation = locations?.find((l) => l.id === selectedLocationId);
+  const [pagerMode, setPagerMode] = usePagerMode();
+  const [printerMode, setPrinterMode] = usePrinterMode();
 
   return (
     <ProtectedRoute allowedRoles={["super_admin", "location_admin", "manager", "waiter"]}>
@@ -64,26 +67,46 @@ export default function Waiter() {
           </Badge>
         ) : null}
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 w-[280px]">
           <Button
             onClick={() => window.open(`/waiter/view?locationId=${selectedLocationId}`, "_blank")}
-            className="gap-2"
+            className="gap-2 justify-center w-full"
             disabled={!selectedLocationId}
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4 shrink-0" />
             Atvērt viesmīļa logu
           </Button>
           <Button
             variant="outline"
-            className="gap-2"
+            className="gap-2 justify-center w-full"
             disabled={!selectedLocationId}
             onClick={() => {
               const url = `${window.location.origin}/waiter/view?locationId=${selectedLocationId}`;
               navigator.clipboard.writeText(url).then(() => toast({ title: t("common.linkCopied") }));
             }}
           >
-            <Copy className="h-4 w-4" />
+            <Copy className="h-4 w-4 shrink-0" />
             {t("common.copyLink")}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setPagerMode(!pagerMode)}
+            className={`gap-2 justify-center w-full ${
+              pagerMode ? "border-primary bg-primary/15 text-primary" : ""
+            }`}
+          >
+            <Radio className="h-4 w-4 shrink-0" />
+            {t("waiter.pagers")}: {pagerMode ? t("waiter.pagersOn") : t("waiter.pagersOff")}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setPrinterMode(!printerMode)}
+            className={`gap-2 justify-center w-full ${
+              printerMode ? "border-primary bg-primary/15 text-primary" : ""
+            }`}
+          >
+            <Printer className="h-4 w-4 shrink-0" />
+            {t("waiter.printer")}: {printerMode ? t("waiter.printerOn") : t("waiter.printerOff")}
           </Button>
         </div>
       </div>
