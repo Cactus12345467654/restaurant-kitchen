@@ -12,8 +12,8 @@
     <script>
       (function() {
         var path = window.location.pathname;
-        var module = path.indexOf('/kitchen/view') === 0 ? 'kitchen' : (path.indexOf('/waiter/view') === 0 ? 'waiter' : 'dashboard');
-        var key = module === 'kitchen' ? 'kitchenTheme' : (module === 'waiter' ? 'waiterTheme' : 'dashboardTheme');
+        var module = path.indexOf('/kitchen/view') === 0 ? 'kitchen' : (path.indexOf('/waiter/view') === 0 ? 'waiter' : (path.indexOf('/order-numbers/view') === 0 ? 'orderNumbers' : 'dashboard'));
+        var key = module === 'kitchen' ? 'kitchenTheme' : (module === 'waiter' ? 'waiterTheme' : (module === 'orderNumbers' ? 'orderNumbersTheme' : 'dashboardTheme'));
         var theme = 'dark';
         try {
           var stored = localStorage.getItem(key);

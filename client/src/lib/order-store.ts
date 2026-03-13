@@ -3,7 +3,7 @@ import { ORDER_STATUS, normalizeStatus, type OrderStatus } from "./order-status"
 
 const ALL_STATUSES = Object.values(ORDER_STATUS) as OrderStatus[];
 
-const POLL_MS_VISIBLE = 2000;
+const POLL_MS_VISIBLE = 1000;
 const POLL_MS_HIDDEN = 10000;
 
 export interface SharedOrder {
@@ -152,8 +152,16 @@ async function fetchAllOrders(locationId?: number | null): Promise<SharedOrder[]
 /**
  * React hook that returns live orders for a location, filtered by statuses.
  * Polls the API so kitchen and waiter stay in sync across devices.
+ * Optional last arg: refreshTrigger (number) – when it changes, triggers immediate refetch.
  */
-export function useOrders(locationId: number | null, ...statuses: OrderStatus[]): SharedOrder[] {
+export function useOrders(
+  locationId: number | null,
+  ...args: (OrderStatus | number)[]
+): SharedOrder[] {
+  const last = args[args.length - 1];
+  const refreshTrigger = typeof last === "number" ? last : undefined;
+  const statuses = (refreshTrigger !== undefined ? args.slice(0, -1) : args) as OrderStatus[];
+
   const filter = useCallback(
     (list: SharedOrder[]) => list.filter((o) => statuses.includes(o.status)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -193,7 +201,7 @@ export function useOrders(locationId: number | null, ...statuses: OrderStatus[])
       document.removeEventListener("visibilitychange", onVisibilityChange);
       clearInterval(intervalId);
     };
-  }, [locationId, statuses.join(","), filter]);
+  }, [locationId, statuses.join(","), filter, refreshTrigger ?? 0]);
 
   return orders;
 }

@@ -283,6 +283,9 @@ export default function WaiterView() {
 
   const markAsGatavs = (order: SharedOrder) => {
     const pagerNum = order.pagerNumber ?? null;
+    // #region agent log
+    fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a5c492'},body:JSON.stringify({sessionId:'a5c492',location:'WaiterView.tsx:markAsGatavs',message:'Notify number display',data:{orderId:order.id,pagerNum},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     notifyNumberDisplay(order.id, pagerNum);
     updateOrderStatus(order.id, ORDER_STATUS.GATAVS);
     if (pagerNum != null) updateOrderPagerCalled(order.id, true);

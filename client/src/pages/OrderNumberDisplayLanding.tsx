@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Copy, MapPin, ImagePlus, Trash2 } from "lucide-react";
+import { NumberDisplayThemeToggle } from "@/components/NumberDisplayThemeToggle";
+import { ExternalLink, Copy, ImagePlus, Trash2 } from "lucide-react";
 import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
 import { useLocations, useUpdateWaitingImage } from "@/hooks/use-locations";
 import {
@@ -11,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { resolveImageUrl } from "@/lib/utils";
@@ -110,16 +110,6 @@ export default function OrderNumberDisplayLanding() {
           </Select>
         )}
 
-        {!showLocationSelector && currentLocation && (
-          <Badge
-            variant="secondary"
-            className="text-sm px-3 py-1.5 gap-1.5 rounded-lg"
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            {currentLocation.name}
-          </Badge>
-        )}
-
         <div className="flex gap-2">
           <Button
             onClick={() =>
@@ -187,6 +177,11 @@ export default function OrderNumberDisplayLanding() {
             )}
           </div>
         )}
+
+        <div className="flex items-center gap-2 rounded-xl border border-border/50 dark:border dark:border-white/50 bg-card/30 p-4 max-w-md">
+          <NumberDisplayThemeToggle />
+          <span className="text-sm text-muted-foreground">{t("orderNumbers.themeForDisplay")}</span>
+        </div>
       </div>
     </ProtectedRoute>
   );

@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import {
   getModuleFromPath,
   getStoredTheme,
+  getStorageKey,
   setStoredTheme,
   type Theme,
   type ThemeModule,
@@ -54,6 +55,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const stored = getStoredTheme(module);
     setThemeState(stored);
     applyTheme(stored);
+  }, [module]);
+
+  useEffect(() => {
+    const key = getStorageKey(module);
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === key && (e.newValue === "light" || e.newValue === "dark")) {
+        setThemeState(e.newValue);
+        applyTheme(e.newValue);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, [module]);
 
   const value: ThemeContextValue = {
