@@ -48,11 +48,21 @@ export async function registerRoutes(
   registerCustomerAuthRoutes(app);
 
   // GET /api/public/loyalty-app-url — public config for Loyalty App link (used by admin dashboard)
-  app.get("/api/public/loyalty-app-url", (_req, res) => {
-    const url =
+  app.get("/api/public/loyalty-app-url", (req, res) => {
+    const raw =
       process.env.NODE_ENV === "production"
         ? (process.env.LOYALTY_APP_URL || "").replace(/\/$/, "")
         : "http://localhost:5001";
+    let url = raw;
+    // Never return a URL that would open the dashboard (same origin)
+    if (raw) {
+      try {
+        const reqOrigin = `${req.protocol}://${req.get("host") || ""}`;
+        if (reqOrigin && new URL(raw).origin === new URL(reqOrigin).origin) url = "";
+      } catch (_) {
+        /* ignore */
+      }
+    }
     return res.json({ url });
   });
 

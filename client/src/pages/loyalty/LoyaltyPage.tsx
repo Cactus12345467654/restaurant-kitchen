@@ -117,6 +117,14 @@ export default function LoyaltyPage() {
       const res = await fetch("/api/public/loyalty-app-url", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch loyalty app URL");
       const { url } = (await res.json()) as { url: string };
+      // Never use a URL that would open the dashboard (same origin)
+      if (url && typeof window !== "undefined") {
+        try {
+          if (new URL(url).origin === window.location.origin) return "";
+        } catch {
+          /* ignore */
+        }
+      }
       return url;
     },
   });
