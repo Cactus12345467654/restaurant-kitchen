@@ -7,7 +7,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
-      "@shared": path.resolve(import.meta.dirname, "../shared"),
     },
   },
   root: path.resolve(import.meta.dirname),
