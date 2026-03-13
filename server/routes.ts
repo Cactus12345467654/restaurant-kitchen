@@ -47,6 +47,15 @@ export async function registerRoutes(
   // Loyalty customer authentication routes
   registerCustomerAuthRoutes(app);
 
+  // GET /api/public/loyalty-app-url — public config for Loyalty App link (used by admin dashboard)
+  app.get("/api/public/loyalty-app-url", (_req, res) => {
+    const url =
+      process.env.NODE_ENV === "production"
+        ? (process.env.LOYALTY_APP_URL || "").replace(/\/$/, "")
+        : "http://localhost:5001";
+    return res.json({ url });
+  });
+
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });

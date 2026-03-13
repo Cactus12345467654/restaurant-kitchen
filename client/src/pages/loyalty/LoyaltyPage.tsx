@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useTranslation } from "@/i18n";
 import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
@@ -103,13 +104,6 @@ function SettingsTab() {
   );
 }
 
-/** Base URL for the Loyalty Web App (supports future multi-location domain mapping) */
-function getLoyaltyAppBaseUrl(): string {
-  const env = import.meta.env.VITE_LOYALTY_APP_URL;
-  if (env && typeof env === "string") return env.replace(/\/$/, "");
-  return import.meta.env.DEV ? "http://localhost:5001" : window.location.origin;
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function LoyaltyPage() {
@@ -117,6 +111,15 @@ export default function LoyaltyPage() {
   const { user } = useAuth();
   const { data: locations } = useLocations();
   const { toast } = useToast();
+  const { data: loyaltyUrlConfig } = useQuery({
+    queryKey: ["public", "loyalty-app-url"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/loyalty-app-url", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch loyalty app URL");
+      const { url } = (await res.json()) as { url: string };
+      return url;
+    },
+  });
   const isSuperAdmin = hasRole(user, "super_admin");
   const showLocationSelector = canSelectLocation(user);
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
@@ -134,9 +137,12 @@ export default function LoyaltyPage() {
     }
   }, [isSuperAdmin, showLocationSelector, user, locations, selectedLocationId]);
 
-  const loyaltyUrl = selectedLocationId
-    ? `${getLoyaltyAppBaseUrl()}?locationId=${selectedLocationId}`
-    : getLoyaltyAppBaseUrl();
+  const baseUrl = loyaltyUrlConfig ?? "";
+  const loyaltyUrl = baseUrl
+    ? selectedLocationId
+      ? `${baseUrl}?locationId=${selectedLocationId}`
+      : baseUrl
+    : "";
 
   return (
     <ProtectedRoute allowedRoles={["super_admin", "location_admin"]}>
@@ -173,7 +179,7 @@ export default function LoyaltyPage() {
             <Button
               onClick={() => window.open(loyaltyUrl, "_blank")}
               className="gap-2"
-              disabled={showLocationSelector && !selectedLocationId}
+              disabled={(showLocationSelector && !selectedLocationId) || !loyaltyUrl}
             >
               <ExternalLink className="h-4 w-4" />
               {t("loyalty.openApp")}
@@ -181,7 +187,7 @@ export default function LoyaltyPage() {
             <Button
               variant="outline"
               className="gap-2"
-              disabled={showLocationSelector && !selectedLocationId}
+              disabled={(showLocationSelector && !selectedLocationId) || !loyaltyUrl}
               onClick={() => {
                 navigator.clipboard.writeText(loyaltyUrl).then(() =>
                   toast({ title: t("common.linkCopied") }),
