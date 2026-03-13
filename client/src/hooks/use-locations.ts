@@ -83,6 +83,28 @@ export function useDeleteLocation() {
   });
 }
 
+export function useUpdateWaitingImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ locationId, imageUrl }: { locationId: number; imageUrl: string | null }) => {
+      const res = await fetch(`/api/locations/${locationId}/waiting-image`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { message?: string }).message || "Failed to update");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.locations.list.path] });
+    },
+  });
+}
+
 export function useReorderLocations() {
   const queryClient = useQueryClient();
   return useMutation({

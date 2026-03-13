@@ -88,7 +88,7 @@ export async function registerRoutes(
   uploadRouter.post(
     "/",
     requireAuth,
-    requireRole(["super_admin", "location_admin", "manager"]),
+    requireRole(["super_admin", "location_admin", "manager", "waiter", "kitchen_staff"]),
     (req: Request, res: Response, next: NextFunction) => {
       upload.single("file")(req, res, (err: any) => {
         if (err) {
@@ -292,6 +292,32 @@ export async function registerRoutes(
       const input = api.locations.update.input.parse(req.body);
       const location = await storage.updateLocation(Number(req.params.id), input);
       res.status(200).json(location);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/locations/:id/waiting-image", requireAuth, requireRole(["super_admin", "location_admin", "manager", "waiter", "kitchen_staff"]), async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const user = req.user as { locationId?: number; roles?: string[] } | undefined;
+      const userLocId = user?.locationId ?? null;
+      const roles = Array.isArray(user?.roles) ? user.roles : [];
+      const canEditAny = roles.includes("super_admin") || roles.includes("location_admin") || roles.includes("manager");
+      if (!canEditAny && userLocId !== id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      const { imageUrl } = z.object({ imageUrl: z.string().nullable() }).parse(req.body);
+      const loc = await storage.getLocation(id);
+      if (!loc) return res.status(404).json({ message: "Location not found" });
+      const config: Record<string, unknown> = { ...((loc.config as Record<string, unknown>) ?? {}) };
+      if (imageUrl === null) delete config.waitingImageUrl;
+      else config.waitingImageUrl = imageUrl;
+      const updated = await storage.updateLocation(id, { config });
+      res.status(200).json(updated);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });

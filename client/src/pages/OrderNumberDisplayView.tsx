@@ -42,6 +42,24 @@ export default function OrderNumberDisplayView() {
     );
   }
 
+  if (readyOrders.length === 0) {
+    const waitingImageUrl = (locations?.find((l) => l.id === locationId)?.config as { waitingImageUrl?: string } | undefined)?.waitingImageUrl ?? null;
+    if (waitingImageUrl) {
+      return (
+        <div className="fixed inset-0 w-full h-full min-h-screen min-w-full bg-black flex items-center justify-center overflow-hidden">
+          <img
+            src={waitingImageUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-700"
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="fixed inset-0 w-full h-full min-h-screen min-w-full bg-black" />
+    );
+  }
+
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
       <header className="border-b border-border/50 dark:border-b dark:border-white/50 px-4 py-2.5 flex items-center justify-between shrink-0 bg-card/50 backdrop-blur-sm">
@@ -64,29 +82,21 @@ export default function OrderNumberDisplayView() {
 
       <main className="flex-1 flex items-center justify-center p-8 overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 w-full max-w-6xl mx-auto">
-          {readyOrders.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <p className="text-2xl font-display font-semibold">
-                {t("orderNumbers.noOrdersReady")}
-              </p>
+          {readyOrders.map((order) => (
+            <div
+              key={order.id}
+              className="flex flex-col items-center justify-center rounded-2xl border border-primary/30 dark:border dark:border-white/50 bg-primary/5 p-8 shadow-lg"
+            >
+              <span className="text-7xl md:text-8xl font-display font-bold text-primary tabular-nums">
+                {getDisplayNumber(order)}
+              </span>
+              <span className="mt-2 text-sm text-muted-foreground">
+                {order.pagerNumber != null && order.pagerNumber >= 1 && order.pagerNumber <= 16
+                  ? t("orderNumbers.pager")
+                  : t("orderNumbers.order")}
+              </span>
             </div>
-          ) : (
-            readyOrders.map((order) => (
-              <div
-                key={order.id}
-                className="flex flex-col items-center justify-center rounded-2xl border border-primary/30 dark:border dark:border-white/50 bg-primary/5 p-8 shadow-lg"
-              >
-                <span className="text-7xl md:text-8xl font-display font-bold text-primary tabular-nums">
-                  {getDisplayNumber(order)}
-                </span>
-                <span className="mt-2 text-sm text-muted-foreground">
-                  {order.pagerNumber != null && order.pagerNumber >= 1 && order.pagerNumber <= 16
-                    ? t("orderNumbers.pager")
-                    : t("orderNumbers.order")}
-                </span>
-              </div>
-            ))
-          )}
+          ))}
         </div>
       </main>
     </div>
