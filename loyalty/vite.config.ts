@@ -23,4 +23,7 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    allowedHosts: ["localhost", "127.0.0.1", "restaurant-loyalty-app2.onrender.com"],
+  },
 });
