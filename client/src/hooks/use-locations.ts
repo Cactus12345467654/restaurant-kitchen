@@ -83,6 +83,28 @@ export function useDeleteLocation() {
   });
 }
 
+export function useUpdateScreenOrientation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ locationId, screenOrientation }: { locationId: number; screenOrientation: string }) => {
+      const res = await fetch(`/api/locations/${locationId}/screen-orientation`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ screenOrientation }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { message?: string }).message || "Failed to update");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.locations.list.path] });
+    },
+  });
+}
+
 export function useUpdateWaitingImage() {
   const queryClient = useQueryClient();
   return useMutation({

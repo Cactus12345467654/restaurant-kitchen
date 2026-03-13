@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import { useTranslation } from "@/i18n";
@@ -6,6 +6,7 @@ import { MapPin } from "lucide-react";
 import { ORDER_STATUS } from "@/lib/order-status";
 import { useOrders } from "@/lib/order-store";
 import type { SharedOrder } from "@/lib/order-store";
+import type { ScreenOrientation } from "@shared/schema";
 
 const COLS = 3;
 const ITEM_HEIGHT = 140;
@@ -16,9 +17,11 @@ const PADDING = 20;
 function useVisibleCapacity(
   containerRef: React.RefObject<HTMLDivElement | null>,
   preparingCount: number,
-  readyCount: number
+  readyCount: number,
+  orientation: ScreenOrientation
 ) {
   const [capacity, setCapacity] = useState(9);
+  const colsPerHalf = orientation === "vertical-left" || orientation === "vertical-right" ? 2 : COLS;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -28,28 +31,18 @@ function useVisibleCapacity(
       const totalW = el.clientWidth;
       const h = el.clientHeight;
       const colW = totalW / 2;
-      const c = Math.min(COLS, Math.max(1, Math.floor((colW - PADDING * 2 + GAP) / (ITEM_WIDTH + GAP))));
+      const c = Math.min(colsPerHalf, Math.max(1, Math.floor((colW - PADDING * 2 + GAP) / (ITEM_WIDTH + GAP))));
       const r = Math.max(1, Math.floor((h - PADDING * 2 + GAP) / (ITEM_HEIGHT + GAP)));
-      const cap = c * r;
-      // #region agent log
-      if (cap < 1 || cap > 99) fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a5c492'},body:JSON.stringify({sessionId:'a5c492',location:'OrderNumberDisplayView.tsx:useVisibleCapacity',message:'Capacity edge',data:{totalW,h,colW,c,r,cap},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      setCapacity(cap);
+      setCapacity(c * r);
     };
 
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [containerRef, preparingCount, readyCount]);
+  }, [containerRef, preparingCount, readyCount, colsPerHalf]);
 
   return capacity;
-}
-
-function isCactusFoodTruck(locationName: string | undefined): boolean {
-  if (!locationName) return false;
-  const lower = locationName.toLowerCase();
-  return lower.includes("cactus") && lower.includes("food truck");
 }
 
 function getDisplayNumber(order: SharedOrder): string {
@@ -59,18 +52,149 @@ function getDisplayNumber(order: SharedOrder): string {
   return String(order.receiptOrderNumber ?? order.id);
 }
 
+// --- Orientation helpers ---
+
+function useResolvedOrientation(configured: ScreenOrientation): ScreenOrientation {
+  const [resolved, setResolved] = useState<ScreenOrientation>(() => {
+    if (configured !== "auto") return configured;
+    return "horizontal";
+  });
+
+  useEffect(() => {
+    if (configured !== "auto") {
+      setResolved(configured);
+      return;
+    }
+
+    const detect = () => {
+      try {
+        const type = screen?.orientation?.type;
+        if (type?.startsWith("portrait")) {
+          setResolved("vertical-right");
+          return;
+        }
+      } catch {}
+      if (window.innerHeight > window.innerWidth) {
+        setResolved("vertical-right");
+      } else {
+        setResolved("horizontal");
+      }
+    };
+
+    detect();
+    try { screen.orientation?.addEventListener("change", detect); } catch {}
+    window.addEventListener("resize", detect);
+    return () => {
+      try { screen.orientation?.removeEventListener("change", detect); } catch {}
+      window.removeEventListener("resize", detect);
+    };
+  }, [configured]);
+
+  return resolved;
+}
+
+function useFullscreen() {
+  const requested = useRef(false);
+  const tryFullscreen = useCallback(() => {
+    if (requested.current) return;
+    requested.current = true;
+    try {
+      const el = document.documentElement;
+      if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => {});
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const handler = () => tryFullscreen();
+    document.addEventListener("click", handler, { once: true });
+    document.addEventListener("touchstart", handler, { once: true });
+    return () => {
+      document.removeEventListener("click", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [tryFullscreen]);
+}
+
+/**
+ * Outer wrapper: rotation only. Inner content: width/height 100%, no transform.
+ * - horizontal: fixed inset 0, 100vw x 100vh, no transform
+ * - vertical-left: fixed top 0 left 0, 100vh x 100vw, rotate(-90deg) translateX(-100%), origin top left
+ * - vertical-right: fixed top 0 left 0, 100vh x 100vw, rotate(90deg) translateY(-100%), origin top left
+ */
+function getOrientationStyle(orientation: ScreenOrientation): React.CSSProperties {
+  if (orientation === "horizontal" || orientation === "auto") {
+    return {
+      position: "fixed",
+      inset: 0,
+      width: "100vw",
+      height: "100vh",
+      overflow: "hidden",
+    };
+  }
+  if (orientation === "vertical-left") {
+    return {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100vh",
+      height: "100vw",
+      transform: "rotate(-90deg) translateX(-100%)",
+      transformOrigin: "top left",
+      overflow: "hidden",
+    };
+  }
+  return {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vh",
+    height: "100vw",
+    transform: "rotate(90deg) translateY(-100%)",
+    transformOrigin: "top left",
+    overflow: "hidden",
+  };
+}
+
+const INNER_CONTENT_STYLE: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+};
+
+function OrientationWrapper({
+  orientation,
+  children,
+}: {
+  orientation: ScreenOrientation;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={getOrientationStyle(orientation)}>
+      <div style={INNER_CONTENT_STYLE}>{children}</div>
+    </div>
+  );
+}
+
+// --- Grid components ---
+
 function SplitColumn({
   title,
   orders,
   getDisplayNumber,
   capacity,
   hasDivider,
+  isVertical,
 }: {
   title: string;
   orders: SharedOrder[];
   getDisplayNumber: (o: SharedOrder) => string;
   capacity: number;
   hasDivider?: boolean;
+  isVertical?: boolean;
 }) {
   const visible = orders.slice(0, capacity);
   return (
@@ -78,13 +202,17 @@ function SplitColumn({
       <div className="order-number-section-header shrink-0 py-3 px-4 text-center border-b border-border/50 dark:border-white/50">
         <h2 className="text-lg md:text-xl font-display font-bold text-foreground">{title}</h2>
       </div>
-      <div className="flex-1 grid grid-cols-3 gap-4 p-5 overflow-hidden content-start min-h-0">
+      <div
+        className={`flex-1 grid gap-4 p-5 overflow-hidden content-start min-h-0 ${isVertical ? "grid-cols-2" : "grid-cols-3"}`}
+      >
         {visible.map((order) => (
           <div
             key={order.id}
             className="order-number-pulse flex items-center justify-center rounded-2xl border border-border/50 dark:border-white/50 bg-muted/30 shadow-md px-6 py-5 min-h-[8rem]"
           >
-            <span className="font-display font-bold text-foreground tabular-nums text-5xl sm:text-6xl md:text-7xl">
+            <span
+              className={`font-display font-bold text-foreground tabular-nums ${isVertical ? "text-7xl md:text-8xl" : "text-5xl sm:text-6xl md:text-7xl"}`}
+            >
               {getDisplayNumber(order)}
             </span>
           </div>
@@ -94,21 +222,24 @@ function SplitColumn({
   );
 }
 
-function CactusSplitView({
+function SplitView({
   preparingOrders,
   readyForPickupOrders,
   getDisplayNumber,
   t,
+  orientation,
 }: {
   preparingOrders: SharedOrder[];
   readyForPickupOrders: SharedOrder[];
   getDisplayNumber: (o: SharedOrder) => string;
   t: (key: string) => string;
+  orientation: ScreenOrientation;
 }) {
   const mainRef = useRef<HTMLDivElement>(null);
-  const capacity = useVisibleCapacity(mainRef, preparingOrders.length, readyForPickupOrders.length);
+  const capacity = useVisibleCapacity(mainRef, preparingOrders.length, readyForPickupOrders.length, orientation);
+  const isVertical = orientation === "vertical-left" || orientation === "vertical-right";
   return (
-    <div className="order-number-display-view pulse-sync h-screen bg-background text-foreground flex flex-col overflow-hidden">
+    <div className="order-number-display-view pulse-sync w-full h-full bg-background text-foreground flex flex-col overflow-hidden">
       <main ref={mainRef} className="flex-1 flex overflow-hidden min-h-0">
         <SplitColumn
           title={t("orderNumbers.gatavojas")}
@@ -116,17 +247,21 @@ function CactusSplitView({
           getDisplayNumber={getDisplayNumber}
           capacity={capacity}
           hasDivider
+          isVertical={isVertical}
         />
         <SplitColumn
           title={t("orderNumbers.gatavsSanemsanai")}
           orders={readyForPickupOrders}
           getDisplayNumber={getDisplayNumber}
           capacity={capacity}
+          isVertical={isVertical}
         />
       </main>
     </div>
   );
 }
+
+// --- Main component ---
 
 export default function OrderNumberDisplayView() {
   const { user } = useAuth();
@@ -136,16 +271,34 @@ export default function OrderNumberDisplayView() {
   const params = new URLSearchParams(window.location.search);
   const paramLocationId = Number(params.get("locationId")) || null;
   const locationId = paramLocationId ?? user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
-  const locationName = locations?.find((l) => l.id === locationId)?.name;
+
+  const urlOrientation = params.get("orientation") as ScreenOrientation | null;
+  const locationConfig = locations?.find((l) => l.id === locationId)?.config as
+    | { waitingImageUrl?: string; screenOrientation?: ScreenOrientation }
+    | undefined;
+  const configOrientation: ScreenOrientation = locationConfig?.screenOrientation ?? "auto";
+
+  const configuredOrientation: ScreenOrientation =
+    urlOrientation && ["auto", "horizontal", "vertical-left", "vertical-right"].includes(urlOrientation)
+      ? urlOrientation
+      : configOrientation;
+
+  const orientation = useResolvedOrientation(configuredOrientation);
+
+  if (import.meta.env.DEV) {
+    console.debug("[OrderNumberDisplay] orientation:", {
+      urlOrientation,
+      configOrientation,
+      configuredOrientation,
+      applied: orientation,
+    });
+  }
+
+  useFullscreen();
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   useEffect(() => {
-    const handler = () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a5c492'},body:JSON.stringify({sessionId:'a5c492',location:'OrderNumberDisplayView.tsx:order-ready-for-display',message:'Refresh triggered',data:{},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      setRefreshTrigger((k) => k + 1);
-    };
+    const handler = () => setRefreshTrigger((k) => k + 1);
     window.addEventListener("order-ready-for-display", handler);
     return () => window.removeEventListener("order-ready-for-display", handler);
   }, []);
@@ -163,9 +316,6 @@ export default function OrderNumberDisplayView() {
     (o) => hasPager(o) && o.pagerCalled !== true,
   );
 
-  const readyOrders = [...izsauktsOrders, ...gatavsOrders].sort(
-    (a, b) => Number(b.id) - Number(a.id),
-  );
   const preparingOrders = [...gatavojasOrders, ...gatavsStillPreparing].sort(
     (a, b) => Number(b.id) - Number(a.id),
   );
@@ -173,15 +323,7 @@ export default function OrderNumberDisplayView() {
     (a, b) => Number(b.id) - Number(a.id),
   );
 
-  const isCactus = isCactusFoodTruck(locationName);
-  const cactusHasOrders = preparingOrders.length > 0 || readyForPickupOrders.length > 0;
-
-  // #region agent log
-  useEffect(() => {
-    const viewType = !locationId ? "noLocation" : isCactus && cactusHasOrders ? "CactusSplitView" : isCactus && !cactusHasOrders ? "waitingImage" : readyOrders.length === 0 ? "waitingImage" : "SingleGridView";
-    fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a5c492'},body:JSON.stringify({sessionId:'a5c492',location:'OrderNumberDisplayView.tsx:render',message:'View state',data:{locationId,locationName,isCactus,preparingCount:preparingOrders.length,readyForPickupCount:readyForPickupOrders.length,readyCount:readyOrders.length,viewType,refreshTrigger},timestamp:Date.now()})}).catch(()=>{});
-  }, [locationId, locationName, isCactus, cactusHasOrders, preparingOrders.length, readyForPickupOrders.length, readyOrders.length, refreshTrigger]);
-  // #endregion
+  const splitHasOrders = preparingOrders.length > 0 || readyForPickupOrders.length > 0;
 
   if (!locationId) {
     return (
@@ -194,122 +336,37 @@ export default function OrderNumberDisplayView() {
     );
   }
 
-  if (isCactus && !cactusHasOrders) {
-    const waitingImageUrl = (locations?.find((l) => l.id === locationId)?.config as { waitingImageUrl?: string } | undefined)?.waitingImageUrl ?? null;
+  if (!splitHasOrders) {
+    const waitingImageUrl = locationConfig?.waitingImageUrl ?? null;
     if (waitingImageUrl) {
       return (
-        <div className="fixed inset-0 w-full h-full min-h-screen min-w-full bg-black flex items-center justify-center overflow-hidden">
-          <img
-            src={waitingImageUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-700"
-          />
-        </div>
+        <OrientationWrapper orientation={orientation}>
+          <div className="w-full h-full bg-black flex items-center justify-center">
+            <img
+              src={waitingImageUrl}
+              alt=""
+              className="max-w-full max-h-full object-contain animate-in fade-in duration-700"
+            />
+          </div>
+        </OrientationWrapper>
       );
     }
     return (
-      <div className="fixed inset-0 w-full h-full min-h-screen min-w-full bg-black" />
+      <OrientationWrapper orientation={orientation}>
+        <div className="w-full h-full bg-black" />
+      </OrientationWrapper>
     );
   }
 
-  if (isCactus && cactusHasOrders) {
-    return (
-      <CactusSplitView
+  return (
+    <OrientationWrapper orientation={orientation}>
+      <SplitView
         preparingOrders={preparingOrders}
         readyForPickupOrders={readyForPickupOrders}
         getDisplayNumber={getDisplayNumber}
         t={t}
+        orientation={orientation}
       />
-    );
-  }
-
-  if (readyOrders.length === 0) {
-    const waitingImageUrl = (locations?.find((l) => l.id === locationId)?.config as { waitingImageUrl?: string } | undefined)?.waitingImageUrl ?? null;
-    if (waitingImageUrl) {
-      return (
-        <div className="fixed inset-0 w-full h-full min-h-screen min-w-full bg-black flex items-center justify-center overflow-hidden">
-          <img
-            src={waitingImageUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-700"
-          />
-        </div>
-      );
-    }
-    return (
-      <div className="fixed inset-0 w-full h-full min-h-screen min-w-full bg-black" />
-    );
-  }
-
-  return (
-    <SingleGridView
-      readyOrders={readyOrders}
-      getDisplayNumber={getDisplayNumber}
-    />
-  );
-}
-
-const SINGLE_COLS = 3;
-const SINGLE_ITEM_HEIGHT = 160;
-const SINGLE_ITEM_WIDTH = 200;
-const SINGLE_GAP = 24;
-const SINGLE_PADDING = 32;
-
-function useSingleGridCapacity(containerRef: React.RefObject<HTMLDivElement | null>) {
-  const [capacity, setCapacity] = useState(16);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const update = () => {
-      const w = el.clientWidth;
-      const h = el.clientHeight;
-      const cols = Math.min(SINGLE_COLS, Math.max(1, Math.floor((w - SINGLE_PADDING * 2 + SINGLE_GAP) / (SINGLE_ITEM_WIDTH + SINGLE_GAP))));
-      const rows = Math.max(1, Math.floor((h - SINGLE_PADDING * 2 + SINGLE_GAP) / (SINGLE_ITEM_HEIGHT + SINGLE_GAP)));
-      const cap = cols * rows;
-      // #region agent log
-      if (cap < 1 || cap > 99) fetch('http://127.0.0.1:7453/ingest/8a2f933e-05c0-4573-9457-60f66e1ab17f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a5c492'},body:JSON.stringify({sessionId:'a5c492',location:'OrderNumberDisplayView.tsx:useSingleGridCapacity',message:'Capacity edge',data:{w,h,cols,rows,cap},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      setCapacity(cap);
-    };
-
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [containerRef]);
-
-  return capacity;
-}
-
-function SingleGridView({
-  readyOrders,
-  getDisplayNumber,
-}: {
-  readyOrders: SharedOrder[];
-  getDisplayNumber: (o: SharedOrder) => string;
-}) {
-  const mainRef = useRef<HTMLDivElement>(null);
-  const capacity = useSingleGridCapacity(mainRef);
-  const visible = readyOrders.slice(0, capacity);
-
-  return (
-    <div className="order-number-display-view pulse-sync h-screen bg-background text-foreground flex flex-col overflow-hidden">
-      <main ref={mainRef} className="flex-1 flex items-center justify-center p-8 overflow-hidden min-h-0">
-        <div className="grid grid-cols-3 gap-6 w-full max-w-5xl mx-auto overflow-hidden">
-          {visible.map((order) => (
-            <div
-              key={order.id}
-              className="order-number-pulse flex items-center justify-center rounded-2xl border border-primary/30 dark:border dark:border-white/50 bg-primary/5 p-6 shadow-lg min-h-[9rem]"
-            >
-              <span className="text-5xl sm:text-6xl md:text-7xl font-display font-bold text-primary tabular-nums">
-                {getDisplayNumber(order)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </main>
-    </div>
+    </OrientationWrapper>
   );
 }

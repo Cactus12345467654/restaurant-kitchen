@@ -21,6 +21,7 @@ const DEFAULT_TEMPLATE: LocationConfig = {
   pagerEnabled: false,
   pagerCount: 16,
   takeawayEnabled: true,
+  screenOrientation: "auto",
 };
 
 /**
@@ -103,9 +104,12 @@ export async function initNewLocationConfig(locationId: number): Promise<void> {
     .where(eq(locations.id, locationId));
 }
 
+/** Display settings synced to all locations (overwrite). */
+const DISPLAY_SYNC_KEYS: (keyof LocationConfig)[] = ["screenOrientation"];
+
 /**
  * Syncs all existing locations to match the template.
- * Only adds missing config keys - never overwrites.
+ * Adds missing config keys; for display settings (screenOrientation) always overwrites.
  */
 export async function syncAllLocationsToTemplate(): Promise<{
   synced: number;
@@ -123,7 +127,12 @@ export async function syncAllLocationsToTemplate(): Promise<{
       raw != null && typeof raw === "object" && !Array.isArray(raw)
         ? (raw as LocationConfig)
         : {};
-    const merged = mergeMissingOnly(current, template);
+    let merged = mergeMissingOnly(current, template);
+    for (const key of DISPLAY_SYNC_KEYS) {
+      if (template[key] !== undefined) {
+        merged = { ...merged, [key]: template[key] };
+      }
+    }
     const changed = JSON.stringify(merged) !== JSON.stringify(current);
 
     if (changed) {

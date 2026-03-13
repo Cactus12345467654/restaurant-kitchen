@@ -10,8 +10,21 @@ export const session = pgTable("session", {
   expire: timestamp("expire", { withTimezone: true }).notNull(),
 });
 
+export type ScreenOrientation = "auto" | "horizontal" | "vertical-left" | "vertical-right";
+
 /** Location configuration shape - keys from reference template "Cactus Burrito Bar" */
-export type LocationConfig = Record<string, unknown>;
+export interface LocationConfig {
+  defaultCategory?: string;
+  categoryOrder?: string[];
+  pagerEnabled?: boolean;
+  pagerCount?: number;
+  takeawayEnabled?: boolean;
+  /** Image shown when no orders are ready. */
+  waitingImageUrl?: string | null;
+  /** Physical screen orientation for the customer display. */
+  screenOrientation?: ScreenOrientation;
+  [key: string]: unknown;
+}
 
 export const locations = pgTable("locations", {
   id: serial("id").primaryKey(),

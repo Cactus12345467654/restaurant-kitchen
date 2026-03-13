@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { NumberDisplayThemeToggle } from "@/components/NumberDisplayThemeToggle";
-import { ExternalLink, Copy, ImagePlus, Trash2 } from "lucide-react";
+import { ExternalLink, Copy, ImagePlus, Trash2, Monitor, Smartphone } from "lucide-react";
 import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
-import { useLocations, useUpdateWaitingImage } from "@/hooks/use-locations";
+import { useLocations, useUpdateWaitingImage, useUpdateScreenOrientation } from "@/hooks/use-locations";
 import {
   Select,
   SelectContent,
@@ -15,6 +17,45 @@ import {
 import { useTranslation } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { resolveImageUrl } from "@/lib/utils";
+import type { ScreenOrientation } from "@shared/schema";
+import type { TranslationKey } from "@/i18n/translations/lv";
+
+type ManualOrientation = Exclude<ScreenOrientation, "auto">;
+
+const MANUAL_OPTIONS: {
+  value: ManualOrientation;
+  labelKey: TranslationKey;
+  descKey: TranslationKey;
+  icon: (cls: string) => React.ReactNode;
+}[] = [
+  {
+    value: "horizontal",
+    labelKey: "orderNumbers.orientationHorizontal",
+    descKey: "orderNumbers.orientationHorizontalDesc",
+    icon: (cls) => <Monitor className={cls} />,
+  },
+  {
+    value: "vertical-left",
+    labelKey: "orderNumbers.orientationVerticalLeft",
+    descKey: "orderNumbers.orientationVerticalLeftDesc",
+    icon: (cls) => <Smartphone className={`${cls} -rotate-90`} />,
+  },
+  {
+    value: "vertical-right",
+    labelKey: "orderNumbers.orientationVerticalRight",
+    descKey: "orderNumbers.orientationVerticalRightDesc",
+    icon: (cls) => <Smartphone className={`${cls} rotate-90`} />,
+  },
+];
+
+function orientationLabel(orientation: ScreenOrientation, t: ReturnType<typeof import("@/i18n").useTranslation>["t"]): string {
+  switch (orientation) {
+    case "horizontal": return t("orderNumbers.orientationHorizontal");
+    case "vertical-left": return t("orderNumbers.orientationVerticalLeft");
+    case "vertical-right": return t("orderNumbers.orientationVerticalRight");
+    default: return t("orderNumbers.orientationAuto");
+  }
+}
 
 export default function OrderNumberDisplayLanding() {
   const { user } = useAuth();
@@ -40,8 +81,48 @@ export default function OrderNumberDisplayLanding() {
   }, [isSuperAdmin, showLocationSelector, user, locations, selectedLocationId]);
 
   const currentLocation = locations?.find((l) => l.id === selectedLocationId);
-  const waitingImageUrl = (currentLocation?.config as { waitingImageUrl?: string } | undefined)?.waitingImageUrl ?? null;
+  const locationConfig = currentLocation?.config as
+    | { waitingImageUrl?: string; screenOrientation?: ScreenOrientation }
+    | undefined;
+  const waitingImageUrl = locationConfig?.waitingImageUrl ?? null;
+  const serverOrientation: ScreenOrientation = locationConfig?.screenOrientation ?? "auto";
+  const [localOrientation, setLocalOrientation] = useState<ScreenOrientation>(serverOrientation);
+
+  useEffect(() => {
+    setLocalOrientation(serverOrientation);
+  }, [serverOrientation]);
+
+  const isCustomOrientation = localOrientation !== "auto";
   const [isUploading, setIsUploading] = useState(false);
+  const updateScreenOrientation = useUpdateScreenOrientation();
+
+  if (import.meta.env.DEV) {
+    console.debug("[OrderNumberDisplayLanding] orientation:", {
+      serverOrientation,
+      localOrientation,
+      locationId: selectedLocationId,
+    });
+  }
+
+  const setOrientation = (value: ScreenOrientation) => {
+    if (!selectedLocationId) return;
+    setLocalOrientation(value);
+    updateScreenOrientation.mutate(
+      {
+        locationId: selectedLocationId,
+        screenOrientation: value,
+      },
+      {
+        onError: () => {
+          toast({ title: t("orderNumbers.saveError"), variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const isSaving = updateScreenOrientation.isPending;
+  const saveStatus =
+    isSaving ? "saving" : updateScreenOrientation.isError ? "error" : updateScreenOrientation.isSuccess ? "saved" : "idle";
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -110,11 +191,12 @@ export default function OrderNumberDisplayLanding() {
           </Select>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
           <Button
-            onClick={() =>
-              window.open(`/order-numbers/view?locationId=${selectedLocationId}`, "_blank")
-            }
+            onClick={() => {
+              const url = `/order-numbers/view?locationId=${selectedLocationId}&orientation=${encodeURIComponent(localOrientation)}`;
+              window.open(url, "_blank");
+            }}
             className="gap-2"
             disabled={!selectedLocationId}
           >
@@ -126,13 +208,22 @@ export default function OrderNumberDisplayLanding() {
             className="gap-2"
             disabled={!selectedLocationId}
             onClick={() => {
-              const url = `${window.location.origin}/order-numbers/view?locationId=${selectedLocationId}`;
+              const url = `${window.location.origin}/order-numbers/view?locationId=${selectedLocationId}&orientation=${encodeURIComponent(localOrientation)}`;
               navigator.clipboard.writeText(url).then(() => toast({ title: t("common.linkCopied") }));
             }}
           >
             <Copy className="h-4 w-4" />
             {t("common.copyLink")}
           </Button>
+
+          {selectedLocationId && (
+            <Badge
+              variant="secondary"
+              className="text-xs px-2.5 py-1 gap-1.5 rounded-md font-normal"
+            >
+              {t("orderNumbers.selectedMode")}: {orientationLabel(localOrientation, t)}
+            </Badge>
+          )}
         </div>
 
         {selectedLocationId && (
@@ -182,6 +273,70 @@ export default function OrderNumberDisplayLanding() {
           <NumberDisplayThemeToggle />
           <span className="text-sm text-muted-foreground">{t("orderNumbers.themeForDisplay")}</span>
         </div>
+
+        {selectedLocationId && (
+          <div className="space-y-4 rounded-xl border border-border/50 dark:border dark:border-white/50 bg-card/30 p-4 max-w-md">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-foreground">{t("orderNumbers.screenOrientation")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("orderNumbers.orientationHelp")} {t("orderNumbers.orientationSyncsAll")}</p>
+              </div>
+              <Switch
+                checked={isCustomOrientation}
+                disabled={isSaving}
+                onCheckedChange={(checked) => {
+                  setOrientation(checked ? "horizontal" : "auto");
+                }}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="text-xs w-fit gap-1.5 rounded-md font-normal">
+                {t("orderNumbers.selectedMode")}: {orientationLabel(localOrientation, t)}
+              </Badge>
+              {saveStatus !== "idle" && (
+                <span className={`text-xs ${saveStatus === "saving" ? "text-muted-foreground" : saveStatus === "error" ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                  {saveStatus === "saving" && t("orderNumbers.saving")}
+                  {saveStatus === "saved" && t("orderNumbers.saved")}
+                  {saveStatus === "error" && t("orderNumbers.saveError")}
+                </span>
+              )}
+            </div>
+
+            {isCustomOrientation && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  {MANUAL_OPTIONS.map((opt) => {
+                    const isActive = localOrientation === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setOrientation(opt.value)}
+                        disabled={isSaving}
+                        className={`flex flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isActive
+                          ? "border-primary bg-primary/10 text-primary shadow-sm"
+                          : "border-border/40 dark:border-white/20 bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:bg-muted/20"
+                      }`}
+                    >
+                      {opt.icon("h-7 w-7")}
+                      <span className="font-semibold leading-tight text-center">
+                        {t(opt.labelKey)}
+                      </span>
+                      <span className={`text-[10px] leading-snug text-center ${isActive ? "text-primary/70" : "text-muted-foreground/70"}`}>
+                        {t(opt.descKey)}
+                      </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("orderNumbers.orientationUsedWhenOpening")}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );
