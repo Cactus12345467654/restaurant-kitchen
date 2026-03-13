@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -116,6 +116,8 @@ export const orders = pgTable("orders", {
   isTakeaway: boolean("is_takeaway").default(false),
   /** Čeka numurs (dienas rindas nr) – parādās UI un čekā visās lokācijās. */
   receiptOrderNumber: integer("receipt_order_number"),
+  /** Loyalty: linked customer UUID (set when customer shows QR at POS). No FK — customers table is defined later. */
+  customerId: text("customer_id"),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
@@ -170,6 +172,85 @@ export const menuItemsRelations = relations(menuItems, ({ one, many }) => ({
   modifierGroups: many(modifierGroups),
 }));
 
+// ── Loyalty / Customer tables ────────────────────────────────────────────────
+
+export const customers = pgTable("customers", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
+  email: text("email"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  marketingConsent: boolean("marketing_consent").notNull().default(false),
+  preferredLanguage: text("preferred_language").notNull().default("lv"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const customerIdentities = pgTable(
+  "customer_identities",
+  {
+    id: serial("id").primaryKey(),
+    customerId: text("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),      // "google"
+    providerSub: text("provider_sub").notNull(), // Google `sub` claim
+    email: text("email"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => [uniqueIndex("ui_customer_identities_provider_sub").on(t.provider, t.providerSub)],
+);
+
+export const loyaltyAccounts = pgTable("loyalty_accounts", {
+  id: serial("id").primaryKey(),
+  customerId: text("customer_id").notNull().unique().references(() => customers.id, { onDelete: "cascade" }),
+  balance: integer("balance").notNull().default(0),
+  lifetimePoints: integer("lifetime_points").notNull().default(0),
+  tier: text("tier").notNull().default("bronze"), // bronze | silver | gold | platinum
+  nextTierAt: integer("next_tier_at"),
+  lastEarnedAt: timestamp("last_earned_at", { withTimezone: true }),
+});
+
+export const loyaltyTransactions = pgTable("loyalty_transactions", {
+  id: serial("id").primaryKey(),
+  customerId: text("customer_id").notNull().references(() => customers.id),
+  type: text("type").notNull(), // earn | redeem | expire | adjust | bonus
+  delta: integer("delta").notNull(),
+  balanceAfter: integer("balance_after").notNull(),
+  note: text("note"),
+  orderId: integer("order_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+export const offers = pgTable("offers", {
+  id: serial("id").primaryKey(),
+  locationId: integer("location_id").references(() => locations.id), // null = global offer
+  title: text("title").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  pointsRequired: integer("points_required").notNull().default(0),
+  rewardType: text("reward_type").notNull(),
+  rewardValue: jsonb("reward_value").$type<Record<string, unknown>>().notNull().default({}),
+  validUntil: timestamp("valid_until", { withTimezone: true }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const customerQrTokens = pgTable("customer_qr_tokens", {
+  id: serial("id").primaryKey(),
+  customerId: text("customer_id").notNull().unique().references(() => customers.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  rotatedAt: timestamp("rotated_at", { withTimezone: true }).defaultNow(),
+});
+
+export const customerOfferActivations = pgTable("customer_offer_activations", {
+  id: serial("id").primaryKey(),
+  customerId: text("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  offerId: integer("offer_id").notNull().references(() => offers.id),
+  voucherCode: text("voucher_code").notNull().unique(),
+  status: text("status").notNull().default("active"), // active | used | expired | cancelled
+  activatedAt: timestamp("activated_at", { withTimezone: true }).defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
 export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users)
   .omit({ id: true, createdAt: true })
@@ -214,3 +295,11 @@ export type UpdateModifierGroupRequest = Partial<InsertModifierGroup>;
 
 export type CreateModifierOptionRequest = InsertModifierOption;
 export type UpdateModifierOptionRequest = Partial<InsertModifierOption>;
+
+export type Customer = typeof customers.$inferSelect;
+export type CustomerIdentity = typeof customerIdentities.$inferSelect;
+export type LoyaltyAccount = typeof loyaltyAccounts.$inferSelect;
+export type LoyaltyTransaction = typeof loyaltyTransactions.$inferSelect;
+export type Offer = typeof offers.$inferSelect;
+export type CustomerQrToken = typeof customerQrTokens.$inferSelect;
+export type CustomerOfferActivation = typeof customerOfferActivations.$inferSelect;

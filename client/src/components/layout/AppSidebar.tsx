@@ -10,7 +10,8 @@ import {
   ConciergeBell,
   BarChart3,
   Clock,
-  Hash
+  Hash,
+  Gift,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/i18n";
@@ -89,6 +90,12 @@ export function AppSidebar() {
       title: t("nav.statistics"),
       icon: BarChart3,
       href: "/statistics",
+      roles: ["super_admin", "location_admin"],
+    },
+    {
+      title: t("nav.loyalty"),
+      icon: Gift,
+      href: "/loyalty",
       roles: ["super_admin", "location_admin"],
     },
     {

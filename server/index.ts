@@ -90,6 +90,9 @@ app.use((req, res, next) => {
   // Never serve HTML for /api – if a request reaches here, return 404 JSON
   app.use((req, res, next) => {
     if (req.path.startsWith("/api")) {
+      // #region agent log
+      if (req.path.startsWith("/api/admin/loyalty")) { try { const _fs = require('fs'); _fs.appendFileSync('debug-544d9b.log', JSON.stringify({sessionId:'544d9b',location:'index.ts:404-catchall',message:'404 catch-all fired for loyalty API',data:{method:req.method,path:req.path},timestamp:Date.now(),runId:'run1',hypothesisId:'H-A'})+'\n'); } catch(_) {} }
+      // #endregion
       return res.status(404).setHeader("Content-Type", "application/json").json({ message: "Not found" });
     }
     next();

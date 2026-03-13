@@ -1,0 +1,31 @@
+{
+  "name": "loyalty-app",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5001",
+    "build": "tsc && vite build",
+    "preview": "vite preview --port 5001"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.60.5",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.453.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.6.0",
+    "wouter": "^3.3.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.17",
+    "typescript": "5.6.3",
+    "vite": "^7.3.0"
+  }
+}

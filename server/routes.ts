@@ -7,11 +7,13 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { initNewLocationConfig } from "./location-config";
 import { api } from "@shared/routes";
-import { uploadedImages } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { uploadedImages, customerQrTokens, customers, loyaltyAccounts, loyaltyTransactions, offers as offersTable, orders as ordersTable } from "@shared/schema";
+import { eq, desc, asc, and, gte, lte, ilike, or, count as sqlCount } from "drizzle-orm";
 import { z } from "zod";
 import passport from "passport";
 import { setupAuth, hashPassword } from "./auth";
+import { registerCustomerAuthRoutes } from "./customer-auth";
+import { awardPointsForOrder } from "./loyalty-points";
 import crypto from "crypto";
 import { sendPasswordResetEmail } from "./email";
 
@@ -41,6 +43,9 @@ export async function registerRoutes(
 ): Promise<Server> {
   // Set up authentication first
   setupAuth(app);
+
+  // Loyalty customer authentication routes
+  registerCustomerAuthRoutes(app);
 
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
@@ -768,6 +773,14 @@ export async function registerRoutes(
       const { status, pagerCalled } = req.body as { status?: string; pagerCalled?: boolean };
       if (status != null) {
         await storage.updateOrderStatus(orderId, status);
+
+        // Award loyalty points when order is delivered to the customer.
+        // Non-fatal: a failure here must never block the order update.
+        if (status === "atdots_klientam") {
+          awardPointsForOrder(orderId).catch((err) =>
+            console.error(`[loyalty] awardPointsForOrder(${orderId}) failed:`, err),
+          );
+        }
       }
       if (pagerCalled !== undefined) {
         await storage.updateOrderPagerCalled(orderId, pagerCalled);
@@ -777,6 +790,115 @@ export async function registerRoutes(
       return res.status(500).json({ message: err?.message || "Failed to update order" });
     }
   });
+
+  // POST /api/orders/:id/link-customer
+  // Staff scans a customer QR code to link them to an active order.
+  // The token is the raw value encoded in the QR — it never exposes customer data directly.
+  app.post(
+    "/api/orders/:id/link-customer",
+    requireAuth,
+    requireRole(["super_admin", "location_admin", "manager", "kitchen_staff", "waiter"]),
+    async (req, res) => {
+      try {
+        const orderId = Number(req.params.id);
+        if (!Number.isFinite(orderId)) {
+          return res.status(400).json({ message: "Invalid order ID" });
+        }
+
+        const { token } = req.body as { token?: string };
+        if (!token?.trim()) {
+          return res.status(400).json({ message: "token required" });
+        }
+
+        // ── Validate order ────────────────────────────────────────────────────
+        const [order] = await db
+          .select({
+            id:         ordersTable.id,
+            status:     ordersTable.status,
+            customerId: ordersTable.customerId,
+          })
+          .from(ordersTable)
+          .where(eq(ordersTable.id, orderId))
+          .limit(1);
+
+        if (!order) {
+          return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Refuse to link once the order has been delivered — points may already be awarded.
+        if (order.status === "atdots_klientam") {
+          return res.status(409).json({ message: "Order is already completed" });
+        }
+
+        // ── Resolve QR token → customerId ─────────────────────────────────────
+        // Token lookup is timing-safe: identical response time for missing vs. invalid tokens.
+        const [qrRow] = await db
+          .select({ customerId: customerQrTokens.customerId })
+          .from(customerQrTokens)
+          .where(eq(customerQrTokens.token, token.trim()))
+          .limit(1);
+
+        if (!qrRow) {
+          return res.status(404).json({ message: "Invalid QR code" });
+        }
+
+        // ── Conflict guard ────────────────────────────────────────────────────
+        if (order.customerId && order.customerId !== qrRow.customerId) {
+          return res.status(409).json({ message: "Order is already linked to a different customer" });
+        }
+
+        // Idempotent: same customer already linked — return current state.
+        if (order.customerId === qrRow.customerId) {
+          // fall through to load + return the same response
+        } else {
+          // ── Link ──────────────────────────────────────────────────────────
+          await db
+            .update(ordersTable)
+            .set({ customerId: qrRow.customerId })
+            .where(eq(ordersTable.id, orderId));
+        }
+
+        // ── Build confirmation response ───────────────────────────────────────
+        const [[customer], [loyalty]] = await Promise.all([
+          db
+            .select({
+              id:          customers.id,
+              displayName: customers.displayName,
+              email:       customers.email,
+              avatarUrl:   customers.avatarUrl,
+            })
+            .from(customers)
+            .where(eq(customers.id, qrRow.customerId))
+            .limit(1),
+          db
+            .select({
+              balance:       loyaltyAccounts.balance,
+              tier:          loyaltyAccounts.tier,
+              lifetimePoints: loyaltyAccounts.lifetimePoints,
+            })
+            .from(loyaltyAccounts)
+            .where(eq(loyaltyAccounts.customerId, qrRow.customerId))
+            .limit(1),
+        ]);
+
+        return res.json({
+          customerId:  qrRow.customerId,
+          displayName: customer?.displayName ?? null,
+          email:       customer?.email       ?? null,
+          avatarUrl:   customer?.avatarUrl   ?? null,
+          loyalty: loyalty
+            ? {
+                balance:       loyalty.balance,
+                tier:          loyalty.tier,
+                lifetimePoints: loyalty.lifetimePoints,
+              }
+            : null,
+        });
+      } catch (err: any) {
+        return res.status(500).json({ message: err?.message || "Failed to link customer" });
+      }
+    },
+  );
 
   app.get("/api/orders", requireAuth, requireRole(["super_admin", "location_admin", "manager"]), async (req, res) => {
     try {
@@ -1037,6 +1159,382 @@ export async function registerRoutes(
       return res.status(500).json({ error: "Failed to delete modifier option" });
     }
   });
+
+  // ── Admin: loyalty customers ─────────────────────────────────────────────────
+
+  // Tier thresholds mirrored from loyalty-points.ts (inline to avoid circular deps)
+  const LOYALTY_TIERS = [
+    { tier: "platinum", min: 2000 },
+    { tier: "gold",     min:  500 },
+    { tier: "silver",   min:  100 },
+    { tier: "bronze",   min:    0 },
+  ] as const;
+  const calcTier = (pts: number): string =>
+    LOYALTY_TIERS.find((t) => pts >= t.min)?.tier ?? "bronze";
+
+  // GET /api/admin/loyalty/customers — paginated customer list with loyalty info
+  app.get(
+    "/api/admin/loyalty/customers",
+    requireAuth,
+    requireRole(["super_admin", "location_admin"]),
+    async (req, res) => {
+      try {
+        const page   = Math.max(1, parseInt(req.query.page  as string) || 1);
+        const limit  = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
+        const offset = (page - 1) * limit;
+        const search = (req.query.search as string | undefined)?.trim();
+
+        const whereClause = search
+          ? or(
+              ilike(customers.displayName, `%${search}%`),
+              ilike(customers.email,       `%${search}%`),
+            )
+          : undefined;
+
+        const [rows, [{ total }]] = await Promise.all([
+          db
+            .select({
+              id:             customers.id,
+              displayName:    customers.displayName,
+              email:          customers.email,
+              avatarUrl:      customers.avatarUrl,
+              createdAt:      customers.createdAt,
+              balance:        loyaltyAccounts.balance,
+              lifetimePoints: loyaltyAccounts.lifetimePoints,
+              tier:           loyaltyAccounts.tier,
+            })
+            .from(customers)
+            .leftJoin(loyaltyAccounts, eq(customers.id, loyaltyAccounts.customerId))
+            .where(whereClause)
+            .orderBy(desc(customers.createdAt))
+            .limit(limit)
+            .offset(offset),
+          db
+            .select({ total: sqlCount() })
+            .from(customers)
+            .leftJoin(loyaltyAccounts, eq(customers.id, loyaltyAccounts.customerId))
+            .where(whereClause),
+        ]);
+
+        return res.json({
+          items: rows.map((r) => ({
+            ...r,
+            createdAt: r.createdAt?.toISOString() ?? null,
+            balance:        r.balance        ?? 0,
+            lifetimePoints: r.lifetimePoints ?? 0,
+            tier:           r.tier           ?? "bronze",
+          })),
+          total: Number(total),
+          page,
+          limit,
+        });
+      } catch (err: any) {
+        console.error("[admin] GET /admin/loyalty/customers error:", err);
+        return res.status(500).json({ message: err?.message || "Failed to fetch customers" });
+      }
+    },
+  );
+
+  // POST /api/admin/loyalty/customers/:id/adjust — manual points adjustment
+  app.post(
+    "/api/admin/loyalty/customers/:id/adjust",
+    requireAuth,
+    requireRole(["super_admin", "location_admin"]),
+    async (req, res) => {
+      try {
+        const customerId = req.params.id;
+        const { delta, note } = req.body as { delta?: unknown; note?: unknown };
+
+        if (typeof delta !== "number" || !Number.isInteger(delta) || delta === 0) {
+          return res.status(400).json({ message: "delta must be a non-zero integer" });
+        }
+        if (!note || typeof note !== "string" || !note.trim()) {
+          return res.status(400).json({ message: "note required" });
+        }
+
+        const [account] = await db
+          .select()
+          .from(loyaltyAccounts)
+          .where(eq(loyaltyAccounts.customerId, customerId))
+          .limit(1);
+
+        if (!account) {
+          return res.status(404).json({ message: "Loyalty account not found" });
+        }
+
+        const newBalance = account.balance + delta;
+        if (newBalance < 0) {
+          return res.status(422).json({ message: "Balance cannot go below 0" });
+        }
+
+        // For positive adjustments update lifetimePoints and recalculate tier.
+        // Negative adjustments only reduce balance (tier is never penalised).
+        const newLifetime = delta > 0
+          ? account.lifetimePoints + delta
+          : account.lifetimePoints;
+        const newTier = calcTier(newLifetime);
+
+        let transactionId!: number;
+
+        await db.transaction(async (tx) => {
+          await tx
+            .update(loyaltyAccounts)
+            .set({
+              balance:        newBalance,
+              lifetimePoints: newLifetime,
+              tier:           newTier,
+              ...(delta > 0 ? { lastEarnedAt: new Date() } : {}),
+            })
+            .where(eq(loyaltyAccounts.customerId, customerId));
+
+          const [txRow] = await tx
+            .insert(loyaltyTransactions)
+            .values({
+              customerId,
+              type:         "adjust",
+              delta,
+              balanceAfter: newBalance,
+              note:         note.trim(),
+            })
+            .returning({ id: loyaltyTransactions.id });
+
+          transactionId = txRow.id;
+        });
+
+        return res.json({
+          transactionId,
+          customerId,
+          delta,
+          balanceAfter:   newBalance,
+          lifetimePoints: newLifetime,
+          tier:           newTier,
+        });
+      } catch (err: any) {
+        console.error("[admin] POST /admin/loyalty/customers/:id/adjust error:", err);
+        return res.status(500).json({ message: err?.message || "Failed to adjust points" });
+      }
+    },
+  );
+
+  // ── Admin: loyalty offers ────────────────────────────────────────────────────
+
+  function serializeLoyaltyOffer(o: typeof offersTable.$inferSelect) {
+    return {
+      id: o.id,
+      locationId: o.locationId,
+      title: o.title,
+      description: o.description,
+      imageUrl: o.imageUrl,
+      pointsRequired: o.pointsRequired,
+      rewardType: o.rewardType,
+      rewardValue: o.rewardValue,
+      validUntil: o.validUntil.toISOString(),
+      isActive: o.isActive,
+      createdAt: o.createdAt?.toISOString() ?? null,
+    };
+  }
+
+  app.get(
+    "/api/admin/loyalty/offers",
+    requireAuth,
+    requireRole(["super_admin", "location_admin"]),
+    async (req, res) => {
+      try {
+        const rows = await db
+          .select()
+          .from(offersTable)
+          .orderBy(desc(offersTable.createdAt));
+        return res.json(rows.map(serializeLoyaltyOffer));
+      } catch (err: any) {
+        return res.status(500).json({ message: err?.message || "Failed to fetch offers" });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/loyalty/offers",
+    requireAuth,
+    requireRole(["super_admin", "location_admin"]),
+    async (req, res) => {
+      // #region agent log
+      try { fs.appendFileSync('debug-544d9b.log', JSON.stringify({sessionId:'544d9b',location:'routes.ts:POST-offers',message:'POST /api/admin/loyalty/offers handler reached',data:{body:req.body,user:(req.user as any)?.id},timestamp:Date.now(),runId:'run1',hypothesisId:'H-A'})+'\n'); } catch(_) {}
+      // #endregion
+      try {
+        const { title, description, imageUrl, pointsRequired, rewardType, rewardValue, validUntil, isActive, locationId } =
+          req.body as Record<string, unknown>;
+
+        if (!title || typeof title !== "string" || !title.trim()) {
+          return res.status(400).json({ message: "title required" });
+        }
+        if (!validUntil || typeof validUntil !== "string") {
+          return res.status(400).json({ message: "validUntil required" });
+        }
+        const validUntilDate = new Date(validUntil);
+        if (isNaN(validUntilDate.getTime())) {
+          return res.status(400).json({ message: "validUntil is not a valid date" });
+        }
+
+        const [row] = await db
+          .insert(offersTable)
+          .values({
+            title: title.trim(),
+            description: typeof description === "string" ? description.trim() || null : null,
+            imageUrl: typeof imageUrl === "string" ? imageUrl || null : null,
+            pointsRequired: typeof pointsRequired === "number" ? Math.max(0, pointsRequired) : 0,
+            rewardType: typeof rewardType === "string" && rewardType ? rewardType : "other",
+            rewardValue: rewardValue && typeof rewardValue === "object" ? (rewardValue as Record<string, unknown>) : {},
+            validUntil: validUntilDate,
+            isActive: typeof isActive === "boolean" ? isActive : true,
+            locationId: typeof locationId === "number" ? locationId : null,
+          })
+          .returning();
+
+        return res.status(201).json(serializeLoyaltyOffer(row));
+      } catch (err: any) {
+        return res.status(500).json({ message: err?.message || "Failed to create offer" });
+      }
+    },
+  );
+
+  app.patch(
+    "/api/admin/loyalty/offers/:id",
+    requireAuth,
+    requireRole(["super_admin", "location_admin"]),
+    async (req, res) => {
+      try {
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
+
+        const [existing] = await db.select().from(offersTable).where(eq(offersTable.id, id)).limit(1);
+        if (!existing) return res.status(404).json({ message: "Offer not found" });
+
+        const { title, description, imageUrl, pointsRequired, rewardType, rewardValue, validUntil, isActive, locationId } =
+          req.body as Record<string, unknown>;
+
+        const updates: Partial<typeof offersTable.$inferInsert> = {};
+        if (typeof title === "string" && title.trim()) updates.title = title.trim();
+        if (description !== undefined) updates.description = typeof description === "string" ? description.trim() || null : null;
+        if (imageUrl !== undefined) updates.imageUrl = typeof imageUrl === "string" ? imageUrl || null : null;
+        if (typeof pointsRequired === "number") updates.pointsRequired = Math.max(0, pointsRequired);
+        if (typeof rewardType === "string" && rewardType) updates.rewardType = rewardType;
+        if (rewardValue !== undefined && typeof rewardValue === "object") updates.rewardValue = rewardValue as Record<string, unknown>;
+        if (validUntil !== undefined && typeof validUntil === "string") {
+          const d = new Date(validUntil);
+          if (!isNaN(d.getTime())) updates.validUntil = d;
+        }
+        if (typeof isActive === "boolean") updates.isActive = isActive;
+        if (locationId !== undefined) updates.locationId = typeof locationId === "number" ? locationId : null;
+
+        const [updated] = await db.update(offersTable).set(updates).where(eq(offersTable.id, id)).returning();
+        return res.json(serializeLoyaltyOffer(updated));
+      } catch (err: any) {
+        return res.status(500).json({ message: err?.message || "Failed to update offer" });
+      }
+    },
+  );
+
+  app.delete(
+    "/api/admin/loyalty/offers/:id",
+    requireAuth,
+    requireRole(["super_admin", "location_admin"]),
+    async (req, res) => {
+      try {
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
+        await db.delete(offersTable).where(eq(offersTable.id, id));
+        return res.status(204).send();
+      } catch (err: any) {
+        return res.status(500).json({ message: err?.message || "Failed to delete offer" });
+      }
+    },
+  );
+
+  // ── Admin: loyalty transactions ──────────────────────────────────────────────
+  // GET /api/admin/loyalty/transactions
+  // Returns paginated transaction history with customer info joined.
+  // Query params: type, customerId, customerSearch, dateFrom, dateTo, page, limit
+  app.get(
+    "/api/admin/loyalty/transactions",
+    requireAuth,
+    requireRole(["super_admin", "location_admin"]),
+    async (req, res) => {
+      try {
+        const page  = Math.max(1, parseInt(req.query.page  as string) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
+        const offset = (page - 1) * limit;
+
+        const { type, customerId, customerSearch, dateFrom, dateTo } = req.query as Record<string, string | undefined>;
+
+        const conditions = [];
+
+        if (type && type !== "all") {
+          conditions.push(eq(loyaltyTransactions.type, type));
+        }
+        if (customerId) {
+          conditions.push(eq(loyaltyTransactions.customerId, customerId));
+        }
+        if (customerSearch?.trim()) {
+          const q = `%${customerSearch.trim()}%`;
+          conditions.push(
+            or(
+              ilike(customers.email, q),
+              ilike(customers.displayName, q),
+            ),
+          );
+        }
+        if (dateFrom) {
+          const d = new Date(dateFrom);
+          if (!isNaN(d.getTime())) conditions.push(gte(loyaltyTransactions.createdAt, d));
+        }
+        if (dateTo) {
+          const d = new Date(dateTo);
+          if (!isNaN(d.getTime())) conditions.push(lte(loyaltyTransactions.createdAt, d));
+        }
+
+        const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const [rows, [{ total }]] = await Promise.all([
+          db
+            .select({
+              id:            loyaltyTransactions.id,
+              customerId:    loyaltyTransactions.customerId,
+              type:          loyaltyTransactions.type,
+              delta:         loyaltyTransactions.delta,
+              balanceAfter:  loyaltyTransactions.balanceAfter,
+              note:          loyaltyTransactions.note,
+              orderId:       loyaltyTransactions.orderId,
+              createdAt:     loyaltyTransactions.createdAt,
+              customerName:  customers.displayName,
+              customerEmail: customers.email,
+            })
+            .from(loyaltyTransactions)
+            .leftJoin(customers, eq(loyaltyTransactions.customerId, customers.id))
+            .where(where)
+            .orderBy(desc(loyaltyTransactions.createdAt))
+            .limit(limit)
+            .offset(offset),
+          db
+            .select({ total: sqlCount() })
+            .from(loyaltyTransactions)
+            .leftJoin(customers, eq(loyaltyTransactions.customerId, customers.id))
+            .where(where),
+        ]);
+
+        return res.json({
+          items: rows.map((r) => ({
+            ...r,
+            createdAt: r.createdAt?.toISOString() ?? null,
+          })),
+          total: Number(total),
+          page,
+          limit,
+        });
+      } catch (err: any) {
+        console.error("[admin] GET /admin/loyalty/transactions error:", err);
+        return res.status(500).json({ message: err?.message || "Failed to fetch transactions" });
+      }
+    },
+  );
 
   return httpServer;
 }

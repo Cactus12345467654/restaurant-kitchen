@@ -27,6 +27,7 @@ import Waiter from "./pages/Waiter";
 import WaiterView from "./pages/WaiterView";
 import TimeTracking from "./pages/TimeTracking";
 import Info from "./pages/Info";
+import LoyaltyPage from "./pages/loyalty/LoyaltyPage";
 
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
                 <Route path="/statistics" component={StatisticsLanding} />
                 <Route path="/order-numbers/view" component={OrderNumberDisplayView} />
                 <Route path="/order-numbers" component={OrderNumberDisplayLanding} />
+                <Route path="/loyalty" component={LoyaltyPage} />
                 <Route path="/" component={Dashboard} />
                 <Route component={NotFound} />
               </Switch>
