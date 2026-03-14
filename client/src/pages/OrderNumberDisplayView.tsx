@@ -250,7 +250,9 @@ function SplitColumn({
             <span
               className={`font-display font-bold text-foreground tabular-nums ${
                 singleNumberPerColumn
-                  ? "text-7xl sm:text-8xl md:text-9xl"
+                  ? isVertical
+                    ? "text-7xl sm:text-8xl md:text-9xl"
+                    : "text-6xl sm:text-7xl md:text-8xl"
                   : isVertical
                     ? "text-7xl md:text-8xl"
                     : "text-5xl sm:text-6xl md:text-7xl"
@@ -370,22 +372,17 @@ export default function OrderNumberDisplayView() {
   );
 
   const readyForPickupRaw = [...izsauktsOrders, ...gatavsReadyForPickup].sort(
-    (a, b) => Number(b.id) - Number(a.id),
+    (a, b) => Number(getDisplayNumber(a)) - Number(getDisplayNumber(b)),
   );
   const readyForPickupOrders = dedupeByDisplayNumber(readyForPickupRaw);
   const readyNumbers = new Set(readyForPickupOrders.map(getDisplayNumber));
 
   const preparingRaw = [...gatavojasOrders, ...gatavsStillPreparing].sort(
-    (a, b) => Number(b.id) - Number(a.id),
+    (a, b) => Number(getDisplayNumber(a)) - Number(getDisplayNumber(b)),
   );
   const preparingOrders = dedupeByDisplayNumber(preparingRaw, readyNumbers);
 
   const splitHasOrders = preparingOrders.length > 0 || readyForPickupOrders.length > 0;
-
-  const locationName = locations?.find((l) => l.id === locationId)?.name ?? "";
-  const isCactusFoodTruck =
-    locationName.toLowerCase().includes("cactus") && locationName.toLowerCase().includes("food truck");
-  const isFoodTruck = locationName.toLowerCase().includes("food truck");
 
   if (!locationId) {
     return (
@@ -428,8 +425,8 @@ export default function OrderNumberDisplayView() {
         getDisplayNumber={getDisplayNumber}
         t={t}
         orientation={orientation}
-        singleNumberPerColumn={isCactusFoodTruck}
-        isFoodTruck={isFoodTruck}
+        singleNumberPerColumn={true}
+        isFoodTruck={true}
       />
     </OrientationWrapper>
   );
