@@ -167,6 +167,52 @@
     border-bottom-color: hsl(0 0% 40%);
   }
 
+  /* Food truck – Gatavojas oranžs, Gatavs zaļš (gaišā un tumšā tēma) */
+  html[data-theme="light"] .order-number-display-food-truck [data-section="gatavojas"] .order-number-section-header {
+    color: hsl(25 95% 40%);
+    border-bottom-color: hsl(25 95% 55%);
+  }
+  html[data-theme="light"] .order-number-display-food-truck [data-section="gatavojas"] .order-number-pulse {
+    border-color: hsl(25 95% 55%);
+    background-color: hsl(25 95% 95%);
+  }
+  html[data-theme="light"] .order-number-display-food-truck [data-section="gatavojas"] .order-number-pulse span {
+    color: hsl(25 95% 35%);
+  }
+  html[data-theme="light"] .order-number-display-food-truck [data-section="gatavs"] .order-number-section-header {
+    color: hsl(142 71% 35%);
+    border-bottom-color: hsl(142 71% 50%);
+  }
+  html[data-theme="light"] .order-number-display-food-truck [data-section="gatavs"] .order-number-pulse {
+    border-color: hsl(142 71% 50%);
+    background-color: hsl(142 71% 96%);
+  }
+  html[data-theme="light"] .order-number-display-food-truck [data-section="gatavs"] .order-number-pulse span {
+    color: hsl(142 71% 30%);
+  }
+  html[data-theme="dark"] .order-number-display-food-truck [data-section="gatavojas"] .order-number-section-header {
+    color: hsl(25 95% 55%);
+    border-bottom-color: hsl(25 95% 45%);
+  }
+  html[data-theme="dark"] .order-number-display-food-truck [data-section="gatavojas"] .order-number-pulse {
+    border-color: hsl(25 95% 45%);
+    background-color: hsl(25 95% 15%);
+  }
+  html[data-theme="dark"] .order-number-display-food-truck [data-section="gatavojas"] .order-number-pulse span {
+    color: hsl(25 95% 65%);
+  }
+  html[data-theme="dark"] .order-number-display-food-truck [data-section="gatavs"] .order-number-section-header {
+    color: hsl(142 71% 55%);
+    border-bottom-color: hsl(142 71% 40%);
+  }
+  html[data-theme="dark"] .order-number-display-food-truck [data-section="gatavs"] .order-number-pulse {
+    border-color: hsl(142 71% 40%);
+    background-color: hsl(142 71% 12%);
+  }
+  html[data-theme="dark"] .order-number-display-food-truck [data-section="gatavs"] .order-number-pulse span {
+    color: hsl(142 71% 60%);
+  }
+
   /* Līdzi badge – dienas režīmā labāka kontrasta */
   html[data-theme="light"] .badge-takeaway {
     background-color: hsl(25 95% 45%);

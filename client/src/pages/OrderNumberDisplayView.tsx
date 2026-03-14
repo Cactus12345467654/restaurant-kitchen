@@ -52,6 +52,23 @@ function getDisplayNumber(order: SharedOrder): string {
   return String(order.receiptOrderNumber ?? order.id);
 }
 
+/** No vienādi numuri vienlaicīgi – saglabā tikai unikālus, prioritāte gatavs saņemšanai */
+function dedupeByDisplayNumber(
+  orders: SharedOrder[],
+  excludeNumbers?: Set<string>,
+  getNum: (o: SharedOrder) => string = getDisplayNumber
+): SharedOrder[] {
+  const seen = new Set<string>(excludeNumbers);
+  const result: SharedOrder[] = [];
+  for (const o of orders) {
+    const num = getNum(o);
+    if (seen.has(num)) continue;
+    seen.add(num);
+    result.push(o);
+  }
+  return result;
+}
+
 // --- Orientation helpers ---
 
 function useResolvedOrientation(configured: ScreenOrientation): ScreenOrientation {
@@ -188,6 +205,8 @@ function SplitColumn({
   capacity,
   hasDivider,
   isVertical,
+  singleNumberPerColumn,
+  sectionType,
 }: {
   title: string;
   orders: SharedOrder[];
@@ -195,15 +214,33 @@ function SplitColumn({
   capacity: number;
   hasDivider?: boolean;
   isVertical?: boolean;
+  singleNumberPerColumn?: boolean;
+  sectionType?: "gatavojas" | "gatavs";
 }) {
   const visible = orders.slice(0, capacity);
+  const gridStyle =
+    singleNumberPerColumn && isVertical && visible.length > 0
+      ? { gridTemplateColumns: "1fr" }
+      : undefined;
+  const gridCols =
+    !singleNumberPerColumn
+      ? isVertical
+        ? "grid-cols-2"
+        : "grid-cols-3"
+      : singleNumberPerColumn && !isVertical
+        ? "grid-cols-3"
+        : "";
   return (
-    <div className={`flex-1 flex flex-col min-w-0 border-r last:border-r-0 border-border/50 dark:border-white/50 ${hasDivider ? "order-number-divider" : ""}`}>
+    <div
+      className={`flex-1 flex flex-col min-w-0 border-r last:border-r-0 border-border/50 dark:border-white/50 ${hasDivider ? "order-number-divider" : ""}`}
+      data-section={sectionType}
+    >
       <div className="order-number-section-header shrink-0 py-3 px-4 text-center border-b border-border/50 dark:border-white/50">
         <h2 className="text-lg md:text-xl font-display font-bold text-foreground">{title}</h2>
       </div>
       <div
-        className={`flex-1 grid gap-4 p-5 overflow-hidden content-start min-h-0 ${isVertical ? "grid-cols-2" : "grid-cols-3"}`}
+        className={`flex-1 grid gap-4 p-5 min-h-0 ${singleNumberPerColumn ? "overflow-y-auto content-start" : "overflow-hidden content-start"} ${gridCols}`}
+        style={gridStyle}
       >
         {visible.map((order) => (
           <div
@@ -211,7 +248,13 @@ function SplitColumn({
             className="order-number-pulse flex items-center justify-center rounded-2xl border border-border/50 dark:border-white/50 bg-muted/30 shadow-md px-6 py-5 min-h-[8rem]"
           >
             <span
-              className={`font-display font-bold text-foreground tabular-nums ${isVertical ? "text-7xl md:text-8xl" : "text-5xl sm:text-6xl md:text-7xl"}`}
+              className={`font-display font-bold text-foreground tabular-nums ${
+                singleNumberPerColumn
+                  ? "text-7xl sm:text-8xl md:text-9xl"
+                  : isVertical
+                    ? "text-7xl md:text-8xl"
+                    : "text-5xl sm:text-6xl md:text-7xl"
+              }`}
             >
               {getDisplayNumber(order)}
             </span>
@@ -228,18 +271,24 @@ function SplitView({
   getDisplayNumber,
   t,
   orientation,
+  singleNumberPerColumn,
+  isFoodTruck,
 }: {
   preparingOrders: SharedOrder[];
   readyForPickupOrders: SharedOrder[];
   getDisplayNumber: (o: SharedOrder) => string;
   t: (key: string) => string;
   orientation: ScreenOrientation;
+  singleNumberPerColumn?: boolean;
+  isFoodTruck?: boolean;
 }) {
   const mainRef = useRef<HTMLDivElement>(null);
   const capacity = useVisibleCapacity(mainRef, preparingOrders.length, readyForPickupOrders.length, orientation);
   const isVertical = orientation === "vertical-left" || orientation === "vertical-right";
   return (
-    <div className="order-number-display-view pulse-sync w-full h-full bg-background text-foreground flex flex-col overflow-hidden">
+    <div
+      className={`order-number-display-view pulse-sync w-full h-full bg-background text-foreground flex flex-col overflow-hidden ${isFoodTruck ? "order-number-display-food-truck" : ""}`}
+    >
       <main ref={mainRef} className="flex-1 flex overflow-hidden min-h-0">
         <SplitColumn
           title={t("orderNumbers.gatavojas")}
@@ -248,6 +297,8 @@ function SplitView({
           capacity={capacity}
           hasDivider
           isVertical={isVertical}
+          singleNumberPerColumn={singleNumberPerColumn}
+          sectionType="gatavojas"
         />
         <SplitColumn
           title={t("orderNumbers.gatavsSanemsanai")}
@@ -255,6 +306,8 @@ function SplitView({
           getDisplayNumber={getDisplayNumber}
           capacity={capacity}
           isVertical={isVertical}
+          singleNumberPerColumn={singleNumberPerColumn}
+          sectionType="gatavs"
         />
       </main>
     </div>
@@ -316,14 +369,23 @@ export default function OrderNumberDisplayView() {
     (o) => hasPager(o) && o.pagerCalled !== true,
   );
 
-  const preparingOrders = [...gatavojasOrders, ...gatavsStillPreparing].sort(
+  const readyForPickupRaw = [...izsauktsOrders, ...gatavsReadyForPickup].sort(
     (a, b) => Number(b.id) - Number(a.id),
   );
-  const readyForPickupOrders = [...izsauktsOrders, ...gatavsReadyForPickup].sort(
+  const readyForPickupOrders = dedupeByDisplayNumber(readyForPickupRaw);
+  const readyNumbers = new Set(readyForPickupOrders.map(getDisplayNumber));
+
+  const preparingRaw = [...gatavojasOrders, ...gatavsStillPreparing].sort(
     (a, b) => Number(b.id) - Number(a.id),
   );
+  const preparingOrders = dedupeByDisplayNumber(preparingRaw, readyNumbers);
 
   const splitHasOrders = preparingOrders.length > 0 || readyForPickupOrders.length > 0;
+
+  const locationName = locations?.find((l) => l.id === locationId)?.name ?? "";
+  const isCactusFoodTruck =
+    locationName.toLowerCase().includes("cactus") && locationName.toLowerCase().includes("food truck");
+  const isFoodTruck = locationName.toLowerCase().includes("food truck");
 
   if (!locationId) {
     return (
@@ -366,6 +428,8 @@ export default function OrderNumberDisplayView() {
         getDisplayNumber={getDisplayNumber}
         t={t}
         orientation={orientation}
+        singleNumberPerColumn={isCactusFoodTruck}
+        isFoodTruck={isFoodTruck}
       />
     </OrientationWrapper>
   );
