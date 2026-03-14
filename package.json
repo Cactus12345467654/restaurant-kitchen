@@ -16,7 +16,8 @@
     "db:add-image-url": "tsx script/db-add-image-url.ts",
     "db:sync-location-config": "tsx script/sync-location-config.ts",
     "create:first-admin": "tsx script/create-first-admin.ts",
-    "db:migrate-images": "tsx script/migrate-images-to-db.ts"
+    "db:migrate-images": "tsx script/migrate-images-to-db.ts",
+    "db:remove-duplicate-orders": "tsx script/remove-duplicate-orders.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

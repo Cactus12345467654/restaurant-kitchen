@@ -6,7 +6,6 @@ import {
   loginWithDev,
   loadGoogleIdentityScript,
   GOOGLE_CLIENT_ID,
-  CAN_USE_TEST_MODE,
 } from "@/auth/service";
 
 declare global {
@@ -90,13 +89,13 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Google button / Test mode / No config */}
+        {/* Google button VAI testa režīms (ja VITE_GOOGLE_CLIENT_ID nav) */}
         {GOOGLE_CLIENT_ID ? (
           <div
             ref={buttonRef}
             className={loading ? "opacity-50 pointer-events-none" : ""}
           />
-        ) : CAN_USE_TEST_MODE ? (
+        ) : (
           <button
             type="button"
             onClick={async () => {
@@ -116,10 +115,6 @@ export default function LoginPage() {
           >
             Ieiet testa režīmā
           </button>
-        ) : (
-          <p className="text-xs text-red-500 text-center">
-            Google autentifikācija nav konfigurēta (VITE_GOOGLE_CLIENT_ID)
-          </p>
         )}
 
         {loading && (

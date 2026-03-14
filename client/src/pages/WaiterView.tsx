@@ -250,6 +250,7 @@ export default function WaiterView() {
   } | null>(null);
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [sendingToKitchen, setSendingToKitchen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("order");
   const [isTakeaway, setIsTakeaway] = useState(false);
   const [pagerMode] = usePagerMode();
@@ -295,6 +296,8 @@ export default function WaiterView() {
 
   const sendToKitchen = async () => {
     if (orderLines.length === 0 || !locationId) return;
+    if (sendingToKitchen) return; // Aizsardzība pret dubultklikšķi
+    setSendingToKitchen(true);
     const items = orderLines.map((l) => {
       const modStr = l.modifiers.map((m) => m.optionName).join(", ");
       return modStr ? `${l.itemName} (${modStr})` : l.itemName;
@@ -309,6 +312,8 @@ export default function WaiterView() {
       setSelectedPager(null);
     } catch (err) {
       console.error("Failed to send order:", err);
+    } finally {
+      setSendingToKitchen(false);
     }
   };
 
@@ -850,14 +855,17 @@ export default function WaiterView() {
             <div className="flex gap-3">
               <button
                 onClick={() => { setShowConfirm(false); setSelectedPager(null); }}
-                className="flex-1 rounded-lg border border-border/50 dark:border dark:border-white/50 py-2.5 text-sm font-medium text-foreground hover:bg-white/5 transition-colors"
+                disabled={sendingToKitchen}
+                className="flex-1 rounded-lg border border-border/50 dark:border dark:border-white/50 py-2.5 text-sm font-medium text-foreground hover:bg-white/5 transition-colors disabled:opacity-50 disabled:pointer-events-none"
               >
                 {t("common.cancel")}
               </button>
               <button
                 onClick={sendToKitchen}
-                className="flex-1 rounded-lg bg-primary text-primary-foreground py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors"
+                disabled={sendingToKitchen}
+                className="flex-1 rounded-lg bg-primary text-primary-foreground py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
               >
+                {sendingToKitchen ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {t("waiter.send")}
               </button>
             </div>
