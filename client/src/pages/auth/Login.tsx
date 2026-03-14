@@ -43,14 +43,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden p-4 text-center">
+    <div className="min-h-screen flex flex-col bg-background relative overflow-hidden p-4 text-center">
       {/* Abstract Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-4 right-4 z-20">
+      {/* Mobīlā: nav plūsmā augšā. Desktop: absolute labajā augšā */}
+      <div className="flex justify-end shrink-0 mb-4 md:absolute md:top-4 md:right-4 md:mb-0 z-20">
         <InfoNavCard />
       </div>
-      <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center w-full max-w-md mx-auto">
         <div className="glass-panel p-8 md:p-10 rounded-3xl relative z-10">
           <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 border border-primary/20">

@@ -13,6 +13,9 @@ import type { QueryClient } from "@tanstack/react-query";
 import { CUSTOMER_ME_KEY } from "@/services/customer";
 
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+export const BETA_ACCESS = import.meta.env.VITE_BETA_ACCESS === "true";
+/** Testa režīms: VITE_BETA_ACCESS=true VAI lokālā izstrāde (npm run dev) */
+export const CAN_USE_TEST_MODE = BETA_ACCESS || import.meta.env.DEV;
 
 // ── Google sign-in ──────────────────────────────────────────────────────────
 

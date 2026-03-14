@@ -388,9 +388,9 @@ export function registerCustomerAuthRoutes(app: Express) {
     }
   });
 
-  // POST /api/auth/customer/dev-login — development-only: create/use test customer (no Google)
-  // Enabled when not in production (covers NODE_ENV=development and unset in dev)
-  if (process.env.NODE_ENV !== "production") {
+  // POST /api/auth/customer/dev-login — create/use test customer (no Google)
+  // Enabled: development mode OR BETA_ACCESS=true (testa režīms)
+  if (process.env.NODE_ENV !== "production" || process.env.BETA_ACCESS === "true") {
     app.post("/api/auth/customer/dev-login", async (req: Request, res: Response) => {
       try {
         const DEV_PROVIDER = "dev";

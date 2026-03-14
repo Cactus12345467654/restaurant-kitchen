@@ -6,6 +6,7 @@ import {
   loginWithDev,
   loadGoogleIdentityScript,
   GOOGLE_CLIENT_ID,
+  CAN_USE_TEST_MODE,
 } from "@/auth/service";
 
 declare global {
@@ -33,7 +34,7 @@ export default function LoginPage() {
   const next = new URLSearchParams(window.location.search).get("next") ?? "/loyalty";
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return;
+    if (!GOOGLE_CLIENT_ID) return; // Paslēpt Google pogu, ja nav VITE_GOOGLE_CLIENT_ID
 
     loadGoogleIdentityScript()
       .then(() => {
@@ -89,8 +90,13 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Google button or dev fallback */}
-        {!GOOGLE_CLIENT_ID && import.meta.env.DEV ? (
+        {/* Google button / Test mode / No config */}
+        {GOOGLE_CLIENT_ID ? (
+          <div
+            ref={buttonRef}
+            className={loading ? "opacity-50 pointer-events-none" : ""}
+          />
+        ) : CAN_USE_TEST_MODE ? (
           <button
             type="button"
             onClick={async () => {
@@ -106,19 +112,14 @@ export default function LoginPage() {
               }
             }}
             disabled={loading}
-            className="w-full max-w-[280px] py-3 px-4 rounded-full border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 font-medium text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            className="w-full max-w-[280px] py-3 px-4 rounded-full border-2 border-orange-300 hover:border-orange-400 hover:bg-orange-50 text-orange-700 font-medium text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none"
           >
-            Enter in development mode
+            Ieiet testa režīmā
           </button>
-        ) : !GOOGLE_CLIENT_ID ? (
+        ) : (
           <p className="text-xs text-red-500 text-center">
             Google autentifikācija nav konfigurēta (VITE_GOOGLE_CLIENT_ID)
           </p>
-        ) : (
-          <div
-            ref={buttonRef}
-            className={loading ? "opacity-50 pointer-events-none" : ""}
-          />
         )}
 
         {loading && (
