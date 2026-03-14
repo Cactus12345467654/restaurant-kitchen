@@ -296,4 +296,60 @@
     will-change: transform;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
+
+  /* Info lapa – digitāls fons ar mikroshēmas motīviem */
+  .info-page-bg .info-circuit-pin {
+    animation: info-pin-pulse 3s ease-in-out infinite;
+  }
+  .info-page-bg .info-circuit-node {
+    animation: info-node-glow 2.5s ease-in-out infinite;
+  }
+  .info-page-bg .info-circuit-chip {
+    animation: info-chip-subtle 4s ease-in-out infinite;
+  }
+  .info-page-bg .info-circuit-dash {
+    animation: info-dash-flow 2s linear infinite;
+  }
+  @keyframes info-pin-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  @keyframes info-node-glow {
+    0%, 100% { opacity: 0.5; filter: drop-shadow(0 0 2px currentColor); }
+    50% { opacity: 1; filter: drop-shadow(0 0 4px currentColor); }
+  }
+  @keyframes info-chip-subtle {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+  @keyframes info-dash-flow {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -8; }
+  }
+  .info-page-bg .info-circuit-line {
+    opacity: 0.8;
+  }
+  .info-flow-line {
+    position: absolute;
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      hsl(var(--primary) / 0.35),
+      transparent
+    );
+    opacity: 0.4;
+    animation: info-flow-vertical 10s linear infinite;
+  }
+  .info-flow-1 { left: 12%; animation-delay: 0s; }
+  .info-flow-2 { left: 28%; animation-delay: 2.5s; }
+  .info-flow-3 { right: 28%; animation-delay: 5s; }
+  .info-flow-4 { right: 12%; animation-delay: 7.5s; }
+  @keyframes info-flow-vertical {
+    0% { transform: translateY(-100vh); opacity: 0; }
+    8% { opacity: 0.4; }
+    92% { opacity: 0.4; }
+    100% { transform: translateY(100vh); opacity: 0; }
+  }
 }

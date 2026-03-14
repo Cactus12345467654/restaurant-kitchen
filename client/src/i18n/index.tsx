@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { lv, type TranslationKey } from "./translations/lv";
 import { en } from "./translations/en";
+import { ru } from "./translations/ru";
 
-type Lang = "lv" | "en";
+type Lang = "lv" | "en" | "ru";
 
-const translations: Record<Lang, Record<TranslationKey, string>> = { lv, en };
+const translations: Record<Lang, Record<TranslationKey, string>> = { lv, en, ru };
 
 interface I18nContextValue {
   lang: Lang;
@@ -19,7 +20,7 @@ const STORAGE_KEY = "brio-lang";
 function getInitialLang(): Lang {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "en" || stored === "lv") return stored;
+    if (stored === "en" || stored === "lv" || stored === "ru") return stored;
   } catch {}
   return "lv";
 }
@@ -73,6 +74,16 @@ export function LanguageSwitcher() {
         }`}
       >
         EN
+      </button>
+      <button
+        onClick={() => setLang("ru")}
+        className={`px-2 py-1 transition-colors ${
+          lang === "ru"
+            ? "bg-primary text-primary-foreground font-semibold"
+            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+        }`}
+      >
+        RU
       </button>
     </div>
   );

@@ -7,9 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/i18n";
-import { LanguageSwitcher } from "@/i18n";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { InfoButton } from "@/components/InfoButton";
+import { InfoNavCard } from "@/components/InfoNavCard";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -49,12 +47,8 @@ export default function Login() {
       {/* Abstract Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <LanguageSwitcher />
-        </div>
-        <InfoButton />
+      <div className="absolute top-4 right-4 z-20">
+        <InfoNavCard />
       </div>
       <div className="w-full max-w-md">
         <div className="glass-panel p-8 md:p-10 rounded-3xl relative z-10">
