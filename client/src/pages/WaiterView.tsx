@@ -296,6 +296,7 @@ export default function WaiterView() {
 
   const sendToKitchen = async () => {
     if (orderLines.length === 0 || !locationId) return;
+    if (activeSessions.length === 0) return; // Nav autorizēts – Check in obligāts
     if (sendingToKitchen) return; // Aizsardzība pret dubultklikšķi
     setSendingToKitchen(true);
     const items = orderLines.map((l) => {
@@ -436,8 +437,10 @@ export default function WaiterView() {
     ? activeByCategory.find(([cat]) => cat === selectedCategory)?.[1] ?? []
     : [];
 
+  const needsCheckIn = activeSessions.length === 0;
+
   return (
-    <div className="h-screen bg-background text-foreground flex">
+    <div className="h-screen bg-background text-foreground flex relative">
       {/* left: menu content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="border-b border-border/50 dark:border-b dark:border-white/50 px-6 py-4 flex items-center gap-4 shrink-0">
@@ -533,6 +536,35 @@ export default function WaiterView() {
           )}
         </main>
       </div>
+
+      {/* Overlay: block order acceptance until someone has checked in */}
+      {needsCheckIn && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+          <div className="max-w-md mx-4 p-8 rounded-2xl border border-border/50 dark:border-white/50 bg-card shadow-xl text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-amber-500/20 p-4">
+                <Clock className="h-12 w-12 text-amber-500" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="font-display font-bold text-xl text-foreground">
+                {t("waiter.checkInRequired")}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {t("waiter.checkInToAcceptOrders")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTimeTrackingOpen(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-base bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Clock className="h-5 w-5" />
+              {t("waiter.checkIn")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* right: order panel */}
       <aside className="w-[320px] shrink-0 border-l border-border/50 dark:border dark:border-white/50 flex flex-col bg-white/[0.02]">

@@ -40,7 +40,7 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   await transporter.sendMail({
     from: smtpFrom!,
     to,
-    subject: "Reset your Brio password",
+    subject: "Reset your Picapex password",
     text: `You requested a password reset.\n\nClick the link below to choose a new password:\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
     html: `
       <p>You requested a password reset.</p>

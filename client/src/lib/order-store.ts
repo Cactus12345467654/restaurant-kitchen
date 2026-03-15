@@ -11,6 +11,8 @@ export interface SharedOrder {
   time: string;
   status: OrderStatus;
   items: string[];
+  /** Total cost price of items (cents). */
+  costPriceCents?: number | null;
   /** Pager 1–16 when assigned; null when none. */
   pagerNumber?: number | null;
   /** True after waiter pressed "Gatavs" and pager signal sent. */
@@ -33,6 +35,7 @@ function mapApiOrder(o: Record<string, unknown>): SharedOrder {
     time: typeof o.time === "string" ? o.time : "00:00",
     status: normalizeStatus(String(o.status ?? "gatavojas")),
     items: Array.isArray(o.items) ? o.items : [],
+    costPriceCents: typeof o.costPriceCents === "number" ? o.costPriceCents : (typeof (o as any).cost_price_cents === "number" ? (o as any).cost_price_cents : null),
     pagerNumber: typeof o.pagerNumber === "number" ? o.pagerNumber : null,
     pagerCalled: o.pagerCalled === true,
     totalPriceCents: typeof o.totalPriceCents === "number" ? o.totalPriceCents : (typeof (o as any).total_price_cents === "number" ? (o as any).total_price_cents : null),
@@ -43,6 +46,7 @@ function mapApiOrder(o: Record<string, unknown>): SharedOrder {
   };
 }
 
+/** Creates order. Items are stored as immutable snapshot — never updated when menu changes. */
 export async function addOrder(
   locationId: number,
   items: string[],

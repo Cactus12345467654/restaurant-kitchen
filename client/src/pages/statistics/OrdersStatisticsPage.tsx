@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "@/i18n";
 import { useAllOrders, getOrderTimestamp } from "@/lib/order-store";
+import { getInitials } from "@/lib/utils";
+import { useActiveChefs } from "@/hooks/use-active-chefs";
 import {
   OrdersStatisticsFilters,
   useOrdersFiltersState,
@@ -48,11 +50,13 @@ export function OrdersStatisticsPage({ locationId }: { locationId?: number | nul
   const { t } = useTranslation();
   const { filters, setFilters, clearFilters } = useOrdersFiltersState();
   const [appliedFilters, setAppliedFilters] = useState<FiltersState>(() => filters);
-  const fetchLocationId =
-    appliedFilters.locationId && Number(appliedFilters.locationId)
-      ? Number(appliedFilters.locationId)
-      : locationId ?? undefined;
+  const fetchLocationId = locationId ?? undefined;
   const orders = useAllOrders(fetchLocationId);
+  const { data: activeChefs = [] } = useActiveChefs(fetchLocationId ?? null);
+  const activeChefsInitials = useMemo(
+    () => (activeChefs.length > 0 ? activeChefs.map((c) => getInitials(c.username)).join(", ") : "-"),
+    [activeChefs]
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
@@ -62,7 +66,7 @@ export function OrdersStatisticsPage({ locationId }: { locationId?: number | nul
   }, [orders, appliedFilters]);
 
   const rows = useMemo(() => {
-    return filteredAndSortedOrders.map((o) => mapOrderToStatisticsRow(o, undefined));
+    return filteredAndSortedOrders.map((o) => mapOrderToStatisticsRow(o));
   }, [filteredAndSortedOrders]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -109,6 +113,7 @@ export function OrdersStatisticsPage({ locationId }: { locationId?: number | nul
 
       <OrdersStatisticsTable
         rows={paginatedRows}
+        activeChefsInitials={activeChefsInitials}
         pagination={{
           page: currentPage,
           totalPages,

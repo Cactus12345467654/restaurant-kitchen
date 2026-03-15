@@ -1,47 +1,24 @@
-import { useAuth } from "@/hooks/use-auth";
-import { useLocations } from "@/hooks/use-locations";
+import { useLocationWithUrlSync } from "@/hooks/use-location-with-url-sync";
 import { useTranslation } from "@/i18n";
 import { BarChart3, MapPin } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
 import { OrdersStatisticsPage } from "./statistics/OrdersStatisticsPage";
 import { ChartReportPage } from "./statistics/ChartReportPage";
 import { ProductMonthlyTableReport } from "./statistics/ProductMonthlyTableReport";
-
-function StatsProductsTab() {
-  const { t } = useTranslation();
-  return (
-    <Card className="p-8 bg-card border-border/50 dark:border-white/50 rounded-2xl">
-      <h2 className="text-xl font-display font-semibold text-foreground">
-        {t("stats.tabProducts")}
-      </h2>
-    </Card>
-  );
-}
-
-function StatsModifiersTab() {
-  const { t } = useTranslation();
-  return (
-    <Card className="p-8 bg-card border-border/50 dark:border-white/50 rounded-2xl">
-      <h2 className="text-xl font-display font-semibold text-foreground">
-        {t("stats.tabModifiers")}
-      </h2>
-    </Card>
-  );
-}
-
-
+import { ModifierMonthlyTableReport } from "./statistics/ModifierMonthlyTableReport";
 
 export default function StatisticsView() {
-  const { user } = useAuth();
   const { t } = useTranslation();
-  const { data: locations } = useLocations();
-
-  const params = new URLSearchParams(window.location.search);
-  const paramLocationId = Number(params.get("locationId")) || null;
-  const locationId = paramLocationId ?? user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
+  const { locationId, setLocationId, locations, showLocationSelector } = useLocationWithUrlSync();
   const locationName = locations?.find((l) => l.id === locationId)?.name;
 
   if (!locationId) {
@@ -63,7 +40,24 @@ export default function StatisticsView() {
             <BarChart3 className="w-5 h-5 text-primary" />
             {t("stats.title")}
           </h1>
-          {locationName && (
+          {showLocationSelector && locations && locations.length > 0 ? (
+            <Select
+              value={locationId?.toString() ?? ""}
+              onValueChange={(v) => setLocationId(v ? Number(v) : null)}
+            >
+              <SelectTrigger className="w-[200px] h-8 text-xs">
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <SelectValue placeholder={t("dashboard.selectLocation")} />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id.toString()}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : locationName ? (
             <Badge
               variant="secondary"
               className="text-xs px-2.5 py-0.5 gap-1 rounded-md font-normal"
@@ -71,26 +65,26 @@ export default function StatisticsView() {
               <MapPin className="w-3 h-3" />
               {locationName}
             </Badge>
-          )}
+          ) : null}
         </div>
         <ThemeToggle />
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-[1600px] mx-auto w-full">
-          <Tabs defaultValue="orders" className="w-full">
+          <Tabs defaultValue="chart" className="w-full">
             <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1 bg-muted/50 border border-border/50 dark:border dark:border-white/50 dark:border-white/50 rounded-xl">
+              <TabsTrigger
+                value="chart"
+                className="rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              >
+                {t("stats.tabChartReport")}
+              </TabsTrigger>
               <TabsTrigger
                 value="orders"
                 className="rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
               >
                 {t("stats.tabOrders")}
-              </TabsTrigger>
-              <TabsTrigger
-                value="products"
-                className="rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              >
-                {t("stats.tabProducts")}
               </TabsTrigger>
               <TabsTrigger
                 value="modifiers"
@@ -104,29 +98,20 @@ export default function StatisticsView() {
               >
                 {t("stats.tabTableReport")}
               </TabsTrigger>
-              <TabsTrigger
-                value="chart"
-                className="rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              >
-                {t("stats.tabChartReport")}
-              </TabsTrigger>
             </TabsList>
 
             <div className="mt-6">
+              <TabsContent value="chart">
+                <ChartReportPage locationId={locationId} />
+              </TabsContent>
               <TabsContent value="orders">
                 <OrdersStatisticsPage locationId={locationId} />
               </TabsContent>
-              <TabsContent value="products">
-                <StatsProductsTab />
-              </TabsContent>
               <TabsContent value="modifiers">
-                <StatsModifiersTab />
+                <ModifierMonthlyTableReport initialLocationId={locationId} />
               </TabsContent>
               <TabsContent value="table">
                 <ProductMonthlyTableReport initialLocationId={locationId} />
-              </TabsContent>
-              <TabsContent value="chart">
-                <ChartReportPage locationId={locationId} />
               </TabsContent>
             </div>
           </Tabs>

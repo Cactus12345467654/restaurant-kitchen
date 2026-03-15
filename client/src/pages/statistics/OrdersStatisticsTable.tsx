@@ -26,7 +26,6 @@ export interface OrderStatisticsRow {
   price: string;
   costPrice: string;
   balanceTotal: string;
-  location: string;
   status: string;
   pagerNumber: string;
   isTakeaway: boolean;
@@ -54,10 +53,7 @@ function getCompletedAt(order: SharedOrder): string | null {
 }
 
 /** Map SharedOrder to statistics row. Uses order snapshot data; fallback for missing fields. */
-export function mapOrderToStatisticsRow(
-  order: SharedOrder,
-  _locationName?: string
-): OrderStatisticsRow {
+export function mapOrderToStatisticsRow(order: SharedOrder): OrderStatisticsRow {
   const items = order.items ?? [];
   const itemsContent = items.length > 0 ? items.join("; ") : FALLBACK;
 
@@ -95,6 +91,10 @@ export function mapOrderToStatisticsRow(
   const price =
     totalCents != null ? `€${(totalCents / 100).toFixed(2)}` : FALLBACK;
 
+  const costCents = order.costPriceCents;
+  const costPrice =
+    costCents != null && costCents >= 0 ? `€${(costCents / 100).toFixed(2)}` : FALLBACK;
+
   return {
     id: order.id,
     orderNumber: order.id,
@@ -106,9 +106,8 @@ export function mapOrderToStatisticsRow(
     itemsContent,
     modifiersContent: mods,
     price,
-    costPrice: FALLBACK,
+    costPrice,
     balanceTotal: FALLBACK,
-    location: _locationName ?? FALLBACK,
     status: order.status,
     pagerNumber: order.pagerNumber != null ? String(order.pagerNumber) : FALLBACK,
     isTakeaway: order.isTakeaway === true,
@@ -127,10 +126,12 @@ interface PaginationProps {
 
 interface OrdersStatisticsTableProps {
   rows: OrderStatisticsRow[];
+  /** Initials of chefs currently logged in to time tracking (e.g. "JB, AK"). */
+  activeChefsInitials?: string;
   pagination?: PaginationProps;
 }
 
-export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTableProps) {
+export function OrdersStatisticsTable({ rows, activeChefsInitials, pagination }: OrdersStatisticsTableProps) {
   const { t } = useTranslation();
 
   return (
@@ -154,14 +155,13 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
             <TableHead className="min-w-[120px] font-semibold text-xs px-2 py-1.5 h-8">{t("statsOrders.colModifiers")}</TableHead>
             <TableHead className="font-semibold text-xs px-2 py-1.5 h-8">{t("statsOrders.colCostPrice")}</TableHead>
             <TableHead className="font-semibold text-xs px-2 py-1.5 h-8">{t("statsOrders.colBalance")}</TableHead>
-            <TableHead className="font-semibold text-xs px-2 py-1.5 h-8">{t("statsOrders.colLocation")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={14}
+                colSpan={13}
                 className="py-12 text-center text-muted-foreground"
               >
                 {t("statsOrders.noOrders")}
@@ -171,7 +171,7 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
             rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="border-border/30 dark:border-white/50 hover:bg-muted/20 h-9"
+                className="border-border/30 dark:border-white/50 hover:bg-muted/20 align-top"
               >
                 <TableCell className="sticky left-0 z-10 bg-card/80 font-medium text-xs px-2 py-1.5">
                   {row.orderNumber}
@@ -190,17 +190,16 @@ export function OrdersStatisticsTable({ rows, pagination }: OrdersStatisticsTabl
                 <TableCell className="text-xs px-2 py-1.5">{row.acceptedAt}</TableCell>
                 <TableCell className="text-xs px-2 py-1.5">{row.completedAt}</TableCell>
                 <TableCell className="text-xs px-2 py-1.5">{row.cookingTime}</TableCell>
-                <TableCell className="text-xs px-2 py-1.5">{row.cook}</TableCell>
+                <TableCell className="text-xs px-2 py-1.5">{activeChefsInitials ?? row.cook}</TableCell>
                 <TableCell className="text-xs px-2 py-1.5">{row.cookId}</TableCell>
-                <TableCell className="max-w-[200px] truncate text-xs px-2 py-1.5">
+                <TableCell className="min-w-[180px] max-w-[320px] text-xs px-2 py-1.5 whitespace-pre-wrap break-words">
                   {row.itemsContent}
                 </TableCell>
-                <TableCell className="max-w-[140px] truncate text-xs px-2 py-1.5 text-muted-foreground">
+                <TableCell className="min-w-[120px] max-w-[240px] text-xs px-2 py-1.5 text-muted-foreground whitespace-pre-wrap break-words">
                   {row.modifiersContent}
                 </TableCell>
                 <TableCell className="text-xs px-2 py-1.5">{row.costPrice}</TableCell>
                 <TableCell className="text-xs px-2 py-1.5">{row.balanceTotal}</TableCell>
-                <TableCell className="text-xs px-2 py-1.5">{row.location}</TableCell>
               </TableRow>
             ))
           )}

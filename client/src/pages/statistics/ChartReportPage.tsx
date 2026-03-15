@@ -4,6 +4,7 @@ import { useTranslation } from "@/i18n";
 import { useAllOrders } from "@/lib/order-store";
 import { ORDER_STATUS } from "@/lib/order-status";
 import { getOrderTimestamp, type SharedOrder } from "@/lib/order-store";
+import { getBaseProductName } from "./table-report-utils";
 import {
   BarChart,
   Bar,
@@ -79,6 +80,11 @@ function getChartConfig(t: (k: string) => string) {
       color: "hsl(142 71% 45%)",
       theme: { light: "hsl(142 71% 45%)", dark: "hsl(142 71% 45%)" },
     },
+    count: {
+      label: t("statsChart.soldCount"),
+      color: "hsl(221 83% 53%)",
+      theme: { light: "hsl(221 83% 53%)", dark: "hsl(221 83% 53%)" },
+    },
   };
 }
 
@@ -88,7 +94,7 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
   const orders = useAllOrders(locationId);
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
 
-  const { dailyData, weeklyData, todayRevenue, weeklyRevenue, todayAvgBasket, weeklyAvgBasket } = useMemo(() => {
+  const { dailyData, weeklyData, dailyProductData, todayRevenue, weeklyRevenue, todayAvgBasket, weeklyAvgBasket } = useMemo(() => {
     const dayStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime();
     const dayEnd = dayStart + 24 * 60 * 60 * 1000;
 
@@ -158,9 +164,26 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
       }
     }
 
+    const productCounts = new Map<string, number>();
+    for (const order of orders) {
+      const ts = getOrderTimestamp(order);
+      if (ts >= dayStart && ts < dayEnd) {
+        const items = order.items ?? [];
+        for (const itemStr of items) {
+          const productName = getBaseProductName(itemStr);
+          if (!productName) continue;
+          productCounts.set(productName, (productCounts.get(productName) ?? 0) + 1);
+        }
+      }
+    }
+    const dailyProductData = Array.from(productCounts.entries())
+      .map(([productName, count]) => ({ productName, count }))
+      .sort((a, b) => b.count - a.count);
+
     return {
       dailyData: Object.values(dailyByHour),
       weeklyData: weeklyArr,
+      dailyProductData,
       todayRevenue: todayRev,
       weeklyRevenue: weekRev,
       todayAvgBasket: todayCount > 0 ? todayRev / todayCount : 0,
@@ -312,6 +335,85 @@ export function ChartReportPage({ locationId }: { locationId?: number | null }) 
             <Bar dataKey="pabeigti" stackId="b" fill="var(--color-pabeigti)" name={t("statsChart.chartPabeigti")} />
           </BarChart>
         </ChartContainer>
+      </Card>
+
+      {/* Daily sold items (horizontal bar chart) */}
+      <Card className="p-6 bg-card border-border/50 dark:border-white/50 rounded-2xl">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-1">
+          <p className="text-lg font-semibold text-foreground">
+            {t("statsChart.dailySoldItems")}
+          </p>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "gap-2 border-border/50 dark:border-white/50",
+                  !isSameDay(selectedDate, new Date()) && "border-primary/50 text-primary"
+                )}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                {format(selectedDate, "dd.MM.yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-card border-border/50 dark:border-white/50" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => d && setSelectedDate(d)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          {isSameDay(selectedDate, new Date())
+            ? t("statsChart.dailySoldItemsToday")
+            : t("statsChart.dailySoldItemsDate").replace("{date}", format(selectedDate, "dd.MM.yyyy"))}
+        </p>
+        {dailyProductData.length === 0 ? (
+          <p className="py-12 text-center text-muted-foreground text-sm">
+            {t("tableReport.noData")}
+          </p>
+        ) : (
+        <ChartContainer
+          config={chartConfig}
+          className="w-full aspect-auto"
+          style={{ height: Math.max(280, Math.min(600, dailyProductData.length * 36)) }}
+        >
+          <BarChart
+            data={dailyProductData}
+            layout="vertical"
+            margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+            <XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+            <YAxis
+              type="category"
+              dataKey="productName"
+              width={160}
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+            />
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const p = payload[0]?.payload as { productName?: string; count?: number } | undefined;
+                return (
+                  <div className="rounded-lg border border-border/50 dark:border dark:border-white/50 bg-background px-3 py-2 shadow-lg">
+                    <p className="font-medium mb-1">{p?.productName ?? ""}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("statsChart.soldCount")}: {p?.count ?? 0}
+                    </p>
+                  </div>
+                );
+              }}
+            />
+            <Bar dataKey="count" fill="var(--color-count)" name={t("statsChart.soldCount")} radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ChartContainer>
+        )}
       </Card>
     </div>
   );

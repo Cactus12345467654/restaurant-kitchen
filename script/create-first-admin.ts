@@ -3,8 +3,8 @@ import { storage } from "../server/storage";
 import { hashPassword } from "../server/auth";
 
 async function main() {
-  const email = "unisolo@inbox.lv";
-  const password = "BrioAdmin123!";
+  const email = "picapex@inbox.lv";
+  const password = "PicapexAdmin123!";
 
   const users = await storage.getUsers();
   const existing = users.find((u) => u.username === email);

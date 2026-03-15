@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
@@ -12,6 +13,8 @@ import {
   Clock,
   Hash,
   Gift,
+  ChevronRight,
+  Monitor,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/i18n";
@@ -24,9 +27,15 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarFooter
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+
+const DEVICES_OPEN_KEY = "sidebar_devices_open";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -37,76 +46,51 @@ export function AppSidebar() {
 
   const userRoles = Array.isArray(user.roles) ? user.roles : ((user as any).role ? [(user as any).role] : []);
   
-  const navItems = [
-    {
-      title: t("nav.dashboard"),
-      icon: LayoutDashboard,
-      href: "/",
-      roles: ["super_admin", "location_admin", "manager"],
-    },
-    {
-      title: t("nav.locations"),
-      icon: MapPin,
-      href: "/locations",
-      roles: ["super_admin"],
-    },
-    {
-      title: t("nav.menu"),
-      icon: UtensilsCrossed,
-      href: "/menu",
-      roles: ["super_admin", "location_admin", "manager"],
-    },
-    {
-      title: t("nav.modifiers"),
-      icon: Layers,
-      href: "/modifiers",
-      roles: ["super_admin", "location_admin", "manager"],
-    },
-    {
-      title: t("nav.users"),
-      icon: UsersIcon,
-      href: "/users",
-      roles: ["super_admin", "location_admin", "manager"],
-    },
-    {
-      title: t("nav.timeTracking"),
-      icon: Clock,
-      href: "/time-tracking",
-      roles: ["super_admin", "location_admin", "manager"],
-    },
-    {
-      title: t("nav.waiter"),
-      icon: ConciergeBell,
-      href: "/waiter",
-      roles: ["super_admin", "location_admin", "manager", "waiter"],
-    },
-    {
-      title: t("nav.kitchen"),
-      icon: ChefHat,
-      href: "/kitchen",
-      roles: ["super_admin", "location_admin", "manager", "kitchen_staff"],
-    },
-    {
-      title: t("nav.statistics"),
-      icon: BarChart3,
-      href: "/statistics",
-      roles: ["super_admin", "location_admin"],
-    },
-    {
-      title: t("nav.loyalty"),
-      icon: Gift,
-      href: "/loyalty",
-      roles: ["super_admin", "location_admin"],
-    },
-    {
-      title: t("nav.orderNumberScreen"),
-      icon: Hash,
-      href: "/order-numbers",
-      roles: ["super_admin", "location_admin", "manager", "waiter", "kitchen_staff"],
-    },
+  const mainNavItems = [
+    { title: t("nav.dashboard"), icon: LayoutDashboard, href: "/", roles: ["super_admin", "location_admin", "manager"] },
+    { title: t("nav.locations"), icon: MapPin, href: "/locations", roles: ["super_admin"] },
+    { title: t("nav.menu"), icon: UtensilsCrossed, href: "/menu", roles: ["super_admin", "location_admin", "manager"] },
+    { title: t("nav.modifiers"), icon: Layers, href: "/modifiers", roles: ["super_admin", "location_admin", "manager"] },
+    { title: t("nav.users"), icon: UsersIcon, href: "/users", roles: ["super_admin", "location_admin", "manager"] },
+    { title: t("nav.timeTracking"), icon: Clock, href: "/time-tracking", roles: ["super_admin", "location_admin", "manager"] },
+    { title: t("nav.statistics"), icon: BarChart3, href: "/statistics", roles: ["super_admin", "location_admin"] },
+    { title: t("nav.loyalty"), icon: Gift, href: "/loyalty", roles: ["super_admin", "location_admin"] },
   ];
 
-  const allowedItems = navItems.filter(item => item.roles.some(r => userRoles.includes(r)));
+  const devicesNavItems = [
+    { title: t("nav.waiter"), icon: ConciergeBell, href: "/waiter", roles: ["super_admin", "location_admin", "manager", "waiter"] },
+    { title: t("nav.kitchen"), icon: ChefHat, href: "/kitchen", roles: ["super_admin", "location_admin", "manager", "kitchen_staff"] },
+    { title: t("nav.orderNumberScreen"), icon: Hash, href: "/order-numbers", roles: ["super_admin", "location_admin", "manager", "waiter", "kitchen_staff"] },
+  ];
+
+  const allowedMain = mainNavItems.filter(item => item.roles.some(r => userRoles.includes(r)));
+  const allowedDevices = devicesNavItems.filter(item => item.roles.some(r => userRoles.includes(r)));
+
+  const [devicesOpen, setDevicesOpen] = useState(() => {
+    try {
+      return localStorage.getItem(DEVICES_OPEN_KEY) !== "false";
+    } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(DEVICES_OPEN_KEY, String(devicesOpen)); } catch { /* ignore */ }
+  }, [devicesOpen]);
+
+  const renderNavItem = (item: typeof mainNavItems[0]) => {
+    const isActive = location === item.href;
+    return (
+      <SidebarMenuItem key={item.href}>
+        <SidebarMenuButton asChild isActive={isActive} className={`
+          rounded-xl transition-all duration-200
+          ${isActive ? 'bg-primary/10 text-primary hover:bg-primary/15 font-semibold' : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'}
+        `}>
+          <Link href={item.href} className="flex items-center gap-3 px-3 py-2.5">
+            <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
+            <span>{item.title}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
     <Sidebar variant="inset" className="border-r border-border/50 dark:border-r dark:border-white/50">
@@ -127,25 +111,40 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-3 space-y-1">
-              {allowedItems.map((item) => {
-                const isActive = location === item.href;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} className={`
-                      rounded-xl transition-all duration-200
-                      ${isActive 
-                        ? 'bg-primary/10 text-primary hover:bg-primary/15 font-semibold' 
-                        : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
-                      }
-                    `}>
-                      <Link href={item.href} className="flex items-center gap-3 px-3 py-2.5">
-                        <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
+              {allowedMain.map(renderNavItem)}
+              {allowedDevices.length > 0 && (
+                <Collapsible open={devicesOpen} onOpenChange={setDevicesOpen}>
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton className="rounded-xl transition-all duration-200 text-muted-foreground hover:bg-white/5 hover:text-foreground">
+                        <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${devicesOpen ? "rotate-90" : ""}`} />
+                        <Monitor className="w-5 h-5 shrink-0" />
+                        <span>{t("nav.devices")}</span>
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub className="ml-2 mt-1 border-l border-border/50 pl-3 space-y-1">
+                        {allowedDevices.map((item) => {
+                          const isActive = location === item.href;
+                          return (
+                            <SidebarMenuSubItem key={item.href}>
+                              <SidebarMenuSubButton asChild isActive={isActive} className={`
+                                rounded-lg transition-all duration-200
+                                ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"}
+                              `}>
+                                <Link href={item.href} className="flex items-center gap-2.5 px-2.5 py-2">
+                                  <item.icon className={`w-4 h-4 ${isActive ? "text-primary" : ""}`} />
+                                  <span>{item.title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          );
+                        })}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
                   </SidebarMenuItem>
-                );
-              })}
+                </Collapsible>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

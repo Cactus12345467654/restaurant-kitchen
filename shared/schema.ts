@@ -63,6 +63,7 @@ export const menuItems = pgTable("menu_items", {
   locationId: integer("location_id").notNull().references(() => locations.id),
   name: text("name").notNull(),
   price: integer("price").notNull(), // stored in cents
+  costPriceCents: integer("cost_price_cents"), // pašizmaksa centos
   category: text("category").notNull(),
   isAvailable: boolean("is_available").default(true),
   imageUrl: text("image_url"),
@@ -98,6 +99,7 @@ export const modifierOptions = pgTable("modifier_options", {
   modifierGroupId: integer("modifier_group_id").notNull().references(() => modifierGroups.id),
   name: text("name").notNull(),
   priceDelta: integer("price_delta").notNull().default(0), // stored in cents
+  costPriceDeltaCents: integer("cost_price_delta_cents"), // pašizmaksa centos (papildinājums)
   isDefault: boolean("is_default").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
@@ -109,7 +111,10 @@ export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   locationId: integer("location_id").notNull().references(() => locations.id),
   status: text("status").notNull().default("gatavojas"),
+  /** Immutable snapshot of item names at order time. Never update when menu changes — historical data must be preserved for all locations. */
   items: jsonb("items").$type<string[]>().notNull(),
+  /** Total cost price of all items (cents), computed when order is created. */
+  costPriceCents: integer("cost_price_cents"),
   pagerNumber: integer("pager_number"),
   pagerCalled: boolean("pager_called").default(false),
   totalPriceCents: integer("total_price_cents"),

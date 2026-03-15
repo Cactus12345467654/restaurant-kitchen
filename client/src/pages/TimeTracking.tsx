@@ -1,8 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth, hasRole, canSelectLocation } from "@/hooks/use-auth";
+import { useLocationWithUrlSync } from "@/hooks/use-location-with-url-sync";
 import { useUsers } from "@/hooks/use-users";
-import { useLocations } from "@/hooks/use-locations";
 import { useTimeEntries } from "@/hooks/use-time-entries";
 import { useTranslation } from "@/i18n";
 import { getDaysInMonth } from "date-fns";
@@ -42,28 +41,14 @@ function minutesToHHMM(m: number): string {
 }
 
 export default function TimeTracking() {
-  const { user } = useAuth();
   const { t } = useTranslation();
-  const isSuperAdmin = hasRole(user, "super_admin");
-  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    isSuperAdmin ? null : (user?.locationId ?? (user as { location_id?: number })?.location_id ?? null),
-  );
+  const { locationId: selectedLocationId, setLocationId: setSelectedLocationId, locations = [] } = useLocationWithUrlSync();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
 
   const { data: users = [], isLoading: usersLoading } = useUsers();
-  const { data: locations = [] } = useLocations();
   const { data: entries = [] } = useTimeEntries(selectedLocationId, year, month);
-
-  useEffect(() => {
-    const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
-    if (isSuperAdmin && locations.length > 0 && selectedLocationId == null) {
-      setSelectedLocationId(locations[0].id);
-    } else if (!isSuperAdmin && userLocId != null && !selectedLocationId) {
-      setSelectedLocationId(userLocId);
-    }
-  }, [isSuperAdmin, locations, selectedLocationId, user]);
 
   const employees = users.filter((u) => {
     if (!u.locationId || u.locationId !== selectedLocationId) return false;
@@ -131,7 +116,7 @@ export default function TimeTracking() {
             {canSelectLocation(user) && locations.length > 0 && (
               <Select
                 value={selectedLocationId != null ? String(selectedLocationId) : ""}
-                onValueChange={(val) => setSelectedLocationId(Number(val))}
+                onValueChange={(val) => setSelectedLocationId(val ? Number(val) : null)}
               >
                 <SelectTrigger className="w-[200px] bg-black/20 border-border/50 dark:border-white/50">
                   <SelectValue placeholder={t("timeTracking.selectLocation")} />

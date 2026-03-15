@@ -1,6 +1,6 @@
 # Project Architecture Overview
 
-Technical architecture for the **Brio** admin web app (restaurant brand: Cactus Burrito Bar). This document serves as an architectural map for development and debugging.
+Technical architecture for the **Picapex** admin web app (restaurant brand: Cactus Burrito Bar). This document serves as an architectural map for development and debugging.
 
 ---
 

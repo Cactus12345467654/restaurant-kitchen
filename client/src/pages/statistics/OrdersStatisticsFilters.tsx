@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useLocations } from "@/hooks/use-locations";
 import { useTranslation } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +19,6 @@ const FILTER_STORAGE_KEY = "orders-stats-filters";
 export interface OrdersFiltersState {
   datetimeFrom: string;
   datetimeTo: string;
-  locationId: string;
   cookId: string;
   orderNumber: string;
   status: string;
@@ -31,7 +29,6 @@ export interface OrdersFiltersState {
 export const defaultFilters: OrdersFiltersState = {
   datetimeFrom: "",
   datetimeTo: "",
-  locationId: "",
   cookId: "",
   orderNumber: "",
   status: "",
@@ -58,7 +55,6 @@ function loadFilters(): OrdersFiltersState {
       else if (parsed.dateFrom) migrated.datetimeFrom = `${parsed.dateFrom}T00:00`;
       if (parsed.datetimeTo != null) migrated.datetimeTo = String(parsed.datetimeTo);
       else if (parsed.dateTo) migrated.datetimeTo = `${parsed.dateTo}T23:59`;
-      if (parsed.locationId != null) migrated.locationId = String(parsed.locationId);
       if (parsed.cookId != null) migrated.cookId = String(parsed.cookId);
       if (parsed.orderNumber != null) migrated.orderNumber = String(parsed.orderNumber);
       if (parsed.status != null) migrated.status = String(parsed.status);
@@ -96,7 +92,6 @@ export function OrdersStatisticsFilters({
   onClear,
 }: OrdersStatisticsFiltersProps) {
   const { t } = useTranslation();
-  const { data: locations } = useLocations();
   const [expanded, setExpanded] = useState(true);
 
   const update = (patch: Partial<OrdersFiltersState>) => {
@@ -106,11 +101,11 @@ export function OrdersStatisticsFilters({
   };
 
   return (
-    <div className="rounded-xl border border-border/50 dark:border dark:border-white/50 bg-card/30 p-4">
+    <div className="rounded-xl border border-border/50 dark:border dark:border-white/50 bg-card/50 backdrop-blur-sm p-5 shadow-sm">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between text-left text-sm font-medium text-muted-foreground hover:text-foreground"
+        className="flex w-full items-center justify-between text-left text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
       >
         <span>{t("statsOrders.filtersSearch")}</span>
         {expanded ? (
@@ -121,9 +116,9 @@ export function OrdersStatisticsFilters({
       </button>
 
       {expanded && (
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">
               {t("statsOrders.dateFrom")}
             </Label>
             <DateTimePicker
@@ -132,8 +127,8 @@ export function OrdersStatisticsFilters({
               placeholder={t("statsOrders.dateFromPlaceholder")}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">
               {t("statsOrders.dateTo")}
             </Label>
             <DateTimePicker
@@ -142,29 +137,8 @@ export function OrdersStatisticsFilters({
               placeholder={t("statsOrders.dateToPlaceholder")}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {t("statsOrders.location")}
-            </Label>
-            <Select
-              value={filters.locationId || "all"}
-              onValueChange={(v) => update({ locationId: v === "all" ? "" : v })}
-            >
-              <SelectTrigger className="h-9 bg-background/50">
-                <SelectValue placeholder={t("statsOrders.selectLocation")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("statsOrders.all")}</SelectItem>
-                {(locations ?? []).map((loc) => (
-                  <SelectItem key={loc.id} value={String(loc.id)}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">
               {t("statsOrders.cook")}
             </Label>
             <Select
@@ -180,8 +154,8 @@ export function OrdersStatisticsFilters({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">
               {t("statsOrders.orderNumber")}
             </Label>
             <Input
@@ -191,8 +165,8 @@ export function OrdersStatisticsFilters({
               className="h-9 bg-background/50"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">
               {t("statsOrders.status")}
             </Label>
             <Select
@@ -219,8 +193,8 @@ export function OrdersStatisticsFilters({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">
               {t("statsOrders.takeaway")}
             </Label>
             <Select
@@ -237,8 +211,8 @@ export function OrdersStatisticsFilters({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">
               {t("statsOrders.search")}
             </Label>
             <Input

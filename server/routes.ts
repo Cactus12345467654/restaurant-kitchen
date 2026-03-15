@@ -636,6 +636,16 @@ export async function registerRoutes(
       res.status(500).json({ message: "Server error" });
     }
   });
+  app.get("/api/time-tracking/active-chefs", requireAuth, async (req, res) => {
+    try {
+      const locationId = Number(req.query.locationId);
+      if (!Number.isFinite(locationId)) return res.status(400).json({ message: "Invalid locationId" });
+      const chefs = await storage.getActiveChefsForLocation(locationId);
+      res.json(chefs);
+    } catch (e) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
   app.get("/api/time-tracking/entries", requireAuth, requireRole(["super_admin", "location_admin", "manager"]), async (req, res) => {
     try {
       const locationId = Number(req.query.locationId);
@@ -661,7 +671,11 @@ export async function registerRoutes(
       const items = await storage.getMenuItems(locationId);
       const normalized = items.map((it: any) => {
         const { imageData: _drop, ...rest } = it;
-        return { ...rest, imageUrl: it.imageUrl ?? it.image_url ?? null };
+        return {
+          ...rest,
+          imageUrl: it.imageUrl ?? it.image_url ?? null,
+          costPriceCents: it.costPriceCents ?? it.cost_price_cents ?? null,
+        };
       });
       return res.json(normalized);
     } catch (err: any) {
@@ -678,7 +692,10 @@ export async function registerRoutes(
       const input = api.menuItems.create.input.parse(req.body);
       const item = await storage.createMenuItem(input);
       const { imageData: _drop, ...rest } = item as any;
-      res.status(201).json(rest);
+      res.status(201).json({
+        ...rest,
+        costPriceCents: (item as any).costPriceCents ?? (item as any).cost_price_cents ?? null,
+      });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -692,7 +709,10 @@ export async function registerRoutes(
       const input = api.menuItems.update.input.parse(req.body);
       const item = await storage.updateMenuItem(Number(req.params.id), input);
       const { imageData: _drop, ...rest } = item as any;
-      res.status(200).json(rest);
+      res.status(200).json({
+        ...rest,
+        costPriceCents: (item as any).costPriceCents ?? (item as any).cost_price_cents ?? null,
+      });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -788,6 +808,9 @@ export async function registerRoutes(
       const orderId = Number(req.params.id);
       if (!Number.isFinite(orderId)) {
         return res.status(400).json({ message: "Invalid order ID" });
+      }
+      if ((req.body as Record<string, unknown>).items !== undefined) {
+        return res.status(400).json({ message: "Order items cannot be updated — historical data must be preserved" });
       }
       const { status, pagerCalled } = req.body as { status?: string; pagerCalled?: boolean };
       if (status != null) {
@@ -1126,15 +1149,20 @@ export async function registerRoutes(
   // Modifier Options
   app.post("/api/modifier-options", requireAuth, async (req, res) => {
     try {
-      const { name, priceDelta, modifierGroupId } = req.body;
+      const { name, priceDelta, costPriceDeltaCents, modifierGroupId } = req.body;
       if (!name || modifierGroupId === undefined) {
         return res.status(400).json({ error: "Invalid modifier option data" });
       }
-      const option = await storage.createModifierOption({ 
-        name, 
-        priceDelta: Number(priceDelta || 0), 
-        modifierGroupId: Number(modifierGroupId) 
-      });
+      const payload: Record<string, unknown> = {
+        name,
+        priceDelta: Number(priceDelta || 0),
+        modifierGroupId: Number(modifierGroupId),
+      };
+      if (costPriceDeltaCents !== undefined) {
+        const cents = costPriceDeltaCents === null || costPriceDeltaCents === "" ? null : Number(costPriceDeltaCents);
+        payload.costPriceDeltaCents = cents !== null && Number.isFinite(cents) ? cents : null;
+      }
+      const option = await storage.createModifierOption(payload as any);
       res.status(201).json(option);
     } catch (err) {
       res.status(500).json({ error: "Failed to create modifier option" });
@@ -1144,16 +1172,16 @@ export async function registerRoutes(
   app.put("/api/modifier-options/:id", requireAuth, async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const updates = (req.body && typeof req.body === "object") ? req.body as { name?: string; priceDelta?: number; sortOrder?: number; isActive?: boolean } : {};
+      const updates = (req.body && typeof req.body === "object") ? req.body as { name?: string; priceDelta?: number; costPriceDeltaCents?: number | null; sortOrder?: number; isActive?: boolean } : {};
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: "No updates provided" });
       }
       const payload: Record<string, unknown> = {};
       if (typeof updates.name === "string") payload.name = updates.name;
       if (typeof updates.priceDelta === "number") payload.priceDelta = updates.priceDelta;
+      if (updates.costPriceDeltaCents !== undefined) payload.costPriceDeltaCents = updates.costPriceDeltaCents;
       if (typeof updates.sortOrder === "number") payload.sortOrder = updates.sortOrder;
       if (typeof updates.isActive === "boolean") payload.isActive = updates.isActive;
-      console.log(`[PUT /modifier-options/${id}] payload:`, JSON.stringify(payload));
       const option = await storage.updateModifierOption(id, payload as any);
       if (!option) {
         return res.status(404).json({ error: "Modifier option not found" });
@@ -1163,7 +1191,6 @@ export async function registerRoutes(
         typeof o.isActive === "boolean" ? o.isActive
         : typeof (o as any).is_active === "boolean" ? (o as any).is_active
         : true;
-      console.log(`[PUT /modifier-options/${id}] DB returned isActive=${isActive}, raw:`, JSON.stringify({ isActive: o.isActive, is_active: (o as any).is_active }));
       return res.status(200).json({ ...o, isActive });
     } catch (err) {
       return res.status(500).json({ error: "Failed to update modifier option" });

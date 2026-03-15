@@ -109,10 +109,10 @@ export default function Info() {
               <p className="flex items-center gap-2">
                 <span className="font-medium text-foreground">{t("info.email")}:</span>
                 <a
-                  href="mailto:unisolo@inbox.lv"
+                  href="mailto:picapex@inbox.lv"
                   className="text-primary hover:underline"
                 >
-                  unisolo@inbox.lv
+                  picapex@inbox.lv
                 </a>
               </p>
             </div>

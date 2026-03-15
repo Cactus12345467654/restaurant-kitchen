@@ -1,7 +1,5 @@
-import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
-import { useLocations } from "@/hooks/use-locations";
+import { useLocationWithUrlSync } from "@/hooks/use-location-with-url-sync";
 import { useLocationModifierGroups } from "@/hooks/use-menu";
 import { useTranslation } from "@/i18n";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,26 +14,8 @@ import {
 } from "@/components/ui/select";
 
 export default function Modifiers() {
-  const { user } = useAuth();
   const { t } = useTranslation();
-  const { data: locations } = useLocations();
-  const isSuperAdmin = hasRole(user, "super_admin");
-  const showLocationSelector = canSelectLocation(user);
-  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    isSuperAdmin ? null : (canSelectLocation(user) ? null : (user?.locationId ?? null)),
-  );
-
-  useEffect(() => {
-    const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
-    if (isSuperAdmin && locations?.length && !selectedLocationId) {
-      setSelectedLocationId(locations[0].id);
-    } else if (showLocationSelector && locations?.length && selectedLocationId == null) {
-      setSelectedLocationId(locations[0].id);
-    } else if (!showLocationSelector && userLocId != null && !selectedLocationId) {
-      setSelectedLocationId(userLocId);
-    }
-  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId, user]);
-
+  const { locationId: selectedLocationId, setLocationId: setSelectedLocationId, locations, showLocationSelector } = useLocationWithUrlSync();
   const { data: groups = [], isLoading } = useLocationModifierGroups(selectedLocationId);
 
   return (
@@ -52,7 +32,7 @@ export default function Modifiers() {
           {showLocationSelector && locations && locations.length > 0 && (
             <Select
               value={selectedLocationId != null ? String(selectedLocationId) : ""}
-              onValueChange={(val) => setSelectedLocationId(Number(val))}
+              onValueChange={(val) => setSelectedLocationId(val ? Number(val) : null)}
             >
               <SelectTrigger className="w-[220px] bg-black/20 border-border/50 dark:border-white/50">
                 <SelectValue placeholder={t("modifiersLib.selectLocation")} />

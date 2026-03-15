@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, or, isNull, inArray, gte, lt, desc, asc, max } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, gte, lt, desc, asc, max, sql } from "drizzle-orm";
 import {
   users,
   locations,
@@ -88,6 +88,7 @@ export interface IStorage {
   createTimeEntry(data: InsertTimeEntry): Promise<TimeEntry>;
   getActiveTimeEntry(userId: number, locationId: number): Promise<TimeEntry | undefined>;
   getActiveTimeEntriesForLocation(locationId: number): Promise<(TimeEntry & { username: string })[]>;
+  getActiveChefsForLocation(locationId: number): Promise<{ userId: number; username: string }[]>;
   getTimeEntries(locationId: number, year: number, month: number): Promise<(TimeEntry & { username: string })[]>;
   pauseTimeEntry(entryId: number, userId: number): Promise<void>;
   resumeTimeEntry(entryId: number, userId: number): Promise<void>;
@@ -194,11 +195,69 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  /** Get base product name from item string. "Burito (Halapenjo)" → "Burito" */
+  private getBaseProductName(item: string): string {
+    const idx = item.indexOf(" (");
+    return idx >= 0 ? item.slice(0, idx).trim() : item.trim();
+  }
+
+  /** Extract modifier option names from item string. "Burito (Halapenjo, Paprika)" → ["Halapenjo", "Paprika"] */
+  private getModifierNamesFromItem(item: string): string[] {
+    const match = item.match(/\(([^)]+)\)/);
+    if (!match) return [];
+    return match[1].split(",").map((m) => m.trim()).filter(Boolean);
+  }
+
+  /** Compute total cost price (cents) for order items from menu + modifier options. */
+  private async computeOrderCostPrice(locationId: number, items: string[]): Promise<number | null> {
+    const menuItemsList = await this.getMenuItems(locationId);
+    const nameToCost = new Map<string, number>();
+    for (const m of menuItemsList) {
+      const name = (m.name ?? "").trim();
+      if (name && m.costPriceCents != null && m.costPriceCents >= 0) {
+        nameToCost.set(name, m.costPriceCents);
+      }
+    }
+    const optionNameToCost = new Map<string, number>();
+    const groups = await this.getModifierGroups(locationId);
+    for (const g of groups) {
+      const opts = await this.getModifierOptions(g.id);
+      for (const o of opts) {
+        const name = (o.name ?? "").trim();
+        const cost = (o as any).costPriceDeltaCents ?? (o as any).cost_price_delta_cents;
+        if (name && cost != null && cost >= 0 && !optionNameToCost.has(name)) {
+          optionNameToCost.set(name, cost);
+        }
+      }
+    }
+    let total = 0;
+    let hasAny = false;
+    for (const item of items) {
+      const baseName = this.getBaseProductName(item);
+      const baseCost = nameToCost.get(baseName);
+      if (baseCost != null) {
+        total += baseCost;
+        hasAny = true;
+      }
+      for (const optName of this.getModifierNamesFromItem(item)) {
+        const optCost = optionNameToCost.get(optName);
+        if (optCost != null) {
+          total += optCost;
+          hasAny = true;
+        }
+      }
+    }
+    return hasAny ? total : null;
+  }
+
   // Orders
+  /** Creates order with immutable item snapshot. Items are stored as-is and must never be updated when menu changes. */
   async createOrder(data: { locationId: number; items: string[]; pagerNumber?: number | null; totalPriceCents?: number | null; isTakeaway?: boolean; receiptOrderNumber?: number | null }) {
+    const costPriceCents = await this.computeOrderCostPrice(data.locationId, data.items);
     const [row] = await db.insert(orders).values({
       locationId: data.locationId,
       items: data.items,
+      costPriceCents: costPriceCents ?? null,
       pagerNumber: data.pagerNumber ?? null,
       totalPriceCents: data.totalPriceCents ?? null,
       isTakeaway: data.isTakeaway ?? false,
@@ -212,6 +271,7 @@ export class DatabaseStorage implements IStorage {
       time,
       status: row.status,
       items: row.items,
+      costPriceCents: row.costPriceCents ?? null,
       pagerNumber: row.pagerNumber,
       pagerCalled: row.pagerCalled ?? false,
       totalPriceCents: row.totalPriceCents,
@@ -232,6 +292,7 @@ export class DatabaseStorage implements IStorage {
       time: r.createdAt ? `${new Date(r.createdAt).getHours().toString().padStart(2, "0")}:${new Date(r.createdAt).getMinutes().toString().padStart(2, "0")}` : "00:00",
       status: r.status,
       items: r.items,
+      costPriceCents: r.costPriceCents ?? null,
       pagerNumber: r.pagerNumber,
       pagerCalled: r.pagerCalled ?? false,
       totalPriceCents: r.totalPriceCents,
@@ -251,6 +312,7 @@ export class DatabaseStorage implements IStorage {
       time: r.createdAt ? `${new Date(r.createdAt).getHours().toString().padStart(2, "0")}:${new Date(r.createdAt).getMinutes().toString().padStart(2, "0")}` : "00:00",
       status: r.status,
       items: r.items,
+      costPriceCents: r.costPriceCents ?? null,
       pagerNumber: r.pagerNumber,
       pagerCalled: r.pagerCalled ?? false,
       totalPriceCents: r.totalPriceCents,
@@ -298,6 +360,7 @@ export class DatabaseStorage implements IStorage {
     return newMenuItem;
   }
 
+  /** Updates menu item. Orders are never modified — they store item names as immutable snapshots at order time. */
   async updateMenuItem(
     id: number,
     updates: UpdateMenuItemRequest,
@@ -310,10 +373,12 @@ export class DatabaseStorage implements IStorage {
     return menuItem;
   }
 
+  /** Deletes menu item. Orders are never modified — they keep the original item names as immutable snapshots. */
   async deleteMenuItem(id: number): Promise<void> {
     await db.delete(menuItems).where(eq(menuItems.id, id));
   }
 
+  /** Renames category in menu_items. Orders are never modified — they store item names as immutable snapshots. */
   async renameCategory(locationId: number, oldName: string, newName: string): Promise<number> {
     const result = await db
       .update(menuItems)
@@ -443,6 +508,7 @@ export class DatabaseStorage implements IStorage {
     const setObj: Record<string, unknown> = { updatedAt: new Date() };
     if (updates.name !== undefined) setObj.name = updates.name;
     if (updates.priceDelta !== undefined) setObj.priceDelta = updates.priceDelta;
+    if (updates.costPriceDeltaCents !== undefined) setObj.costPriceDeltaCents = updates.costPriceDeltaCents;
     if (updates.sortOrder !== undefined) setObj.sortOrder = updates.sortOrder;
     if (updates.isDefault !== undefined) setObj.isDefault = updates.isDefault;
     if (updates.isActive !== undefined) setObj.isActive = updates.isActive;
@@ -505,6 +571,30 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(timeEntries.userId, users.id))
       .where(and(eq(timeEntries.locationId, locationId), isNull(timeEntries.endedAt)));
     return rows as (TimeEntry & { username: string })[];
+  }
+
+  /** Active users with kitchen_staff role who have clocked in at this location. */
+  async getActiveChefsForLocation(locationId: number): Promise<{ userId: number; username: string }[]> {
+    const rows = await db
+      .select({
+        userId: timeEntries.userId,
+        username: users.username,
+      })
+      .from(timeEntries)
+      .innerJoin(users, eq(timeEntries.userId, users.id))
+      .where(
+        and(
+          eq(timeEntries.locationId, locationId),
+          isNull(timeEntries.endedAt),
+          sql`'kitchen_staff' = ANY(${users.roles})`
+        )
+      );
+    const seen = new Set<number>();
+    return rows.filter((r) => {
+      if (seen.has(r.userId)) return false;
+      seen.add(r.userId);
+      return true;
+    });
   }
 
   async getTimeEntries(locationId: number, year: number, month: number): Promise<(TimeEntry & { username: string })[]> {

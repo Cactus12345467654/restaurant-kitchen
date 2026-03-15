@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useTranslation } from "@/i18n";
-import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
-import { useLocations } from "@/hooks/use-locations";
+import { useLocationWithUrlSync } from "@/hooks/use-location-with-url-sync";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -128,22 +126,6 @@ export default function LoyaltyPage() {
       return url;
     },
   });
-  const isSuperAdmin = hasRole(user, "super_admin");
-  const showLocationSelector = canSelectLocation(user);
-  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    isSuperAdmin ? null : (canSelectLocation(user) ? null : (user?.locationId ?? null)),
-  );
-
-  useEffect(() => {
-    if (isSuperAdmin && locations?.length && !selectedLocationId) {
-      setSelectedLocationId(locations[0].id);
-    } else if (showLocationSelector && !selectedLocationId && locations?.length) {
-      setSelectedLocationId(locations[0].id);
-    } else if (!showLocationSelector) {
-      const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
-      if (userLocId != null && selectedLocationId !== userLocId) setSelectedLocationId(userLocId);
-    }
-  }, [isSuperAdmin, showLocationSelector, user, locations, selectedLocationId]);
 
   const baseUrl = loyaltyUrlConfig ?? "";
   const loyaltyUrl = baseUrl
@@ -168,7 +150,7 @@ export default function LoyaltyPage() {
           {showLocationSelector && locations && locations.length > 0 && (
             <Select
               value={selectedLocationId?.toString() ?? ""}
-              onValueChange={(v) => setSelectedLocationId(Number(v))}
+              onValueChange={(v) => setSelectedLocationId(v ? Number(v) : null)}
             >
               <SelectTrigger className="w-[260px]">
                 <SelectValue placeholder={t("dashboard.selectLocation")} />

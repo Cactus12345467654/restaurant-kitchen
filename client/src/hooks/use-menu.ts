@@ -63,7 +63,14 @@ export function useUpdateMenuItem(locationId: number | null) {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedItem) => {
+      if (updatedItem && locationId) {
+        queryClient.setQueryData<MenuItem[]>(['menu-items', locationId], (old) => {
+          if (!old) return old;
+          const normalized = { ...updatedItem, costPriceCents: (updatedItem as any).costPriceCents ?? (updatedItem as any).cost_price_cents ?? null };
+          return old.map((it) => (it.id === normalized.id ? { ...it, ...normalized } : it));
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['menu-items', locationId] });
     },
   });
@@ -191,7 +198,7 @@ export function useDetachModifierGroupFromItem(menuItemId: number | null) {
 export function useCreateModifierOption(menuItemId: number | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { name: string, priceDelta: number, modifierGroupId: number }) => {
+    mutationFn: async (data: { name: string, priceDelta: number, costPriceDeltaCents?: number | null, modifierGroupId: number }) => {
       const res = await fetch("/api/modifier-options", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -289,6 +296,7 @@ export function useUpdateModifierOption(menuItemId: number | null) {
       id: number;
       name?: string;
       priceDelta?: number;
+      costPriceDeltaCents?: number | null;
       sortOrder?: number;
       isActive?: boolean;
     }) => {
@@ -296,6 +304,7 @@ export function useUpdateModifierOption(menuItemId: number | null) {
       const body: Record<string, unknown> = {};
       if (rest.name !== undefined) body.name = rest.name;
       if (rest.priceDelta !== undefined) body.priceDelta = rest.priceDelta;
+      if (rest.costPriceDeltaCents !== undefined) body.costPriceDeltaCents = rest.costPriceDeltaCents;
       if (rest.sortOrder !== undefined) body.sortOrder = rest.sortOrder;
       if (rest.isActive !== undefined) body.isActive = rest.isActive;
       if (Object.keys(body).length === 0) {
@@ -335,6 +344,7 @@ export function useUpdateModifierOption(menuItemId: number | null) {
         variables.isActive !== undefined &&
         variables.name === undefined &&
         variables.priceDelta === undefined &&
+        variables.costPriceDeltaCents === undefined &&
         variables.sortOrder === undefined;
       if (onlyIsActive) return;
       queryClient.invalidateQueries({ queryKey: ['menu-item-modifiers', menuItemId] });

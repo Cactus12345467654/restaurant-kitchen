@@ -5,8 +5,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { NumberDisplayThemeToggle } from "@/components/NumberDisplayThemeToggle";
 import { ExternalLink, Copy, ImagePlus, Trash2, Monitor, Smartphone } from "lucide-react";
-import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
-import { useLocations, useUpdateWaitingImage, useUpdateScreenOrientation } from "@/hooks/use-locations";
+import { useLocationWithUrlSync } from "@/hooks/use-location-with-url-sync";
+import { useUpdateWaitingImage, useUpdateScreenOrientation } from "@/hooks/use-locations";
 import {
   Select,
   SelectContent,
@@ -58,28 +58,10 @@ function orientationLabel(orientation: ScreenOrientation, t: ReturnType<typeof i
 }
 
 export default function OrderNumberDisplayLanding() {
-  const { user } = useAuth();
-  const { data: locations } = useLocations();
-  const updateWaitingImage = useUpdateWaitingImage();
-  const isSuperAdmin = hasRole(user, "super_admin");
-  const showLocationSelector = canSelectLocation(user);
-  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    isSuperAdmin ? null : (canSelectLocation(user) ? null : (user?.locationId ?? null)),
-  );
   const { t } = useTranslation();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (isSuperAdmin && locations?.length && !selectedLocationId) {
-      setSelectedLocationId(locations[0].id);
-    } else if (showLocationSelector && !selectedLocationId && locations?.length) {
-      setSelectedLocationId(locations[0].id);
-    } else if (!showLocationSelector) {
-      const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
-      if (userLocId != null && selectedLocationId !== userLocId) setSelectedLocationId(userLocId);
-    }
-  }, [isSuperAdmin, showLocationSelector, user, locations, selectedLocationId]);
-
+  const { locationId: selectedLocationId, setLocationId: setSelectedLocationId, locations, showLocationSelector } = useLocationWithUrlSync();
+  const updateWaitingImage = useUpdateWaitingImage();
   const currentLocation = locations?.find((l) => l.id === selectedLocationId);
   const locationConfig = currentLocation?.config as
     | { waitingImageUrl?: string; screenOrientation?: ScreenOrientation }
@@ -176,7 +158,7 @@ export default function OrderNumberDisplayLanding() {
         {showLocationSelector && locations && locations.length > 0 && (
           <Select
             value={selectedLocationId?.toString() ?? ""}
-            onValueChange={(v) => setSelectedLocationId(Number(v))}
+            onValueChange={(v) => setSelectedLocationId(v ? Number(v) : null)}
           >
             <SelectTrigger className="w-[260px]">
               <SelectValue placeholder={t("dashboard.selectLocation")} />

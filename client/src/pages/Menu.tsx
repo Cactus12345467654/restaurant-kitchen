@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, Fragment, useRef } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth, hasRole, canSelectLocation } from "@/hooks/use-auth";
-import { useLocations } from "@/hooks/use-locations";
+import { useLocationWithUrlSync } from "@/hooks/use-location-with-url-sync";
 import {
   useMenuItems,
   useCreateMenuItem,
@@ -38,6 +37,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -72,6 +81,7 @@ function ModifierOptionForm({
 }) {
   const [name, setName] = useState("");
   const [priceDeltaStr, setPriceDeltaStr] = useState("0");
+  const [costPriceDeltaStr, setCostPriceDeltaStr] = useState("");
   const createOptionMutation = useCreateModifierOption(menuItemId);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -83,10 +93,19 @@ function ModifierOptionForm({
     const priceDelta = Math.round(parseFloat(priceDeltaStr) * 100);
     if (isNaN(priceDelta)) return;
 
+    const costPriceDeltaCents = costPriceDeltaStr.trim()
+      ? Math.round(parseFloat(costPriceDeltaStr) * 100)
+      : null;
+    if (costPriceDeltaStr.trim() && (costPriceDeltaCents == null || isNaN(costPriceDeltaCents) || costPriceDeltaCents < 0)) {
+      toast({ title: t("menu.invalidCostPrice"), variant: "destructive" });
+      return;
+    }
+
     try {
       await createOptionMutation.mutateAsync({
         name,
         priceDelta,
+        costPriceDeltaCents: costPriceDeltaCents ?? null,
         modifierGroupId: groupId,
       });
       onCancel();
@@ -105,9 +124,9 @@ function ModifierOptionForm({
       onSubmit={handleSubmit}
       className="mt-3 p-3 bg-black/40 rounded-lg border border-border/30 dark:border dark:border-white/50 space-y-3 animate-in fade-in zoom-in-95 duration-200"
     >
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1">
-          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          <Label className="text-[10px] uppercase tracking-wider text-foreground">
             {t("modifiers.optionName")}
           </Label>
           <Input
@@ -119,7 +138,7 @@ function ModifierOptionForm({
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          <Label className="text-[10px] uppercase tracking-wider text-foreground">
             {t("modifiers.extraPrice")}
           </Label>
           <Input
@@ -127,6 +146,20 @@ function ModifierOptionForm({
             step="0.01"
             value={priceDeltaStr}
             onChange={(e) => setPriceDeltaStr(e.target.value)}
+            className="h-8 text-xs bg-black/20 border-border/50 dark:border-white/50"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase tracking-wider text-foreground">
+            {t("modifiers.costPrice")}
+          </Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={costPriceDeltaStr}
+            onChange={(e) => setCostPriceDeltaStr(e.target.value)}
+            placeholder={t("menu.costPricePlaceholder")}
             className="h-8 text-xs bg-black/20 border-border/50 dark:border-white/50"
           />
         </div>
@@ -192,6 +225,7 @@ function ManageModifiersModal({
   const [editingOptionId, setEditingOptionId] = useState<number | null>(null);
   const [editOptionName, setEditOptionName] = useState("");
   const [editOptionPriceStr, setEditOptionPriceStr] = useState("");
+  const [editOptionCostPriceStr, setEditOptionCostPriceStr] = useState("");
   const [draggedOptionId, setDraggedOptionId] = useState<number | null>(null);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -320,6 +354,8 @@ function ManageModifiersModal({
     setEditingOptionId(option.id);
     setEditOptionName(option.name);
     setEditOptionPriceStr(((option.priceDelta ?? 0) / 100).toFixed(2));
+    const costCents = option.costPriceDeltaCents ?? option.cost_price_delta_cents;
+    setEditOptionCostPriceStr(costCents != null ? (costCents / 100).toFixed(2) : "");
   };
 
   const cancelOptionEdit = () => {
@@ -337,9 +373,15 @@ function ManageModifiersModal({
       toast({ title: t("modifiers.invalidPrice"), variant: "destructive" });
       return;
     }
+    const costPriceDeltaCents = editOptionCostPriceStr.trim()
+      ? Math.round(parseFloat(editOptionCostPriceStr) * 100)
+      : null;
+    if (editOptionCostPriceStr.trim() && (costPriceDeltaCents == null || isNaN(costPriceDeltaCents) || costPriceDeltaCents < 0)) {
+      toast({ title: t("menu.invalidCostPrice"), variant: "destructive" });
+      return;
+    }
     try {
-      await updateOptionMutation.mutateAsync({ id: optionId, name, priceDelta });
-      await refetch();
+      await updateOptionMutation.mutateAsync({ id: optionId, name, priceDelta, costPriceDeltaCents: costPriceDeltaCents ?? null });
       setEditingOptionId(null);
       toast({ title: t("modifiers.optionUpdated") });
     } catch (err: any) {
@@ -610,9 +652,9 @@ function ManageModifiersModal({
                               key={option.id}
                               className="mt-3 p-3 bg-black/40 rounded-lg border border-border/30 dark:border dark:border-white/50 space-y-3 animate-in fade-in zoom-in-95 duration-200"
                             >
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="grid grid-cols-3 gap-2">
                                 <div className="space-y-1">
-                                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                  <Label className="text-[10px] uppercase tracking-wider text-foreground">
                                     {t("modifiers.optionName")}
                                   </Label>
                                   <Input
@@ -623,7 +665,7 @@ function ManageModifiersModal({
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                  <Label className="text-[10px] uppercase tracking-wider text-foreground">
                                     {t("modifiers.extraPrice")}
                                   </Label>
                                   <Input
@@ -631,6 +673,20 @@ function ManageModifiersModal({
                                     step="0.01"
                                     value={editOptionPriceStr}
                                     onChange={(e) => setEditOptionPriceStr(e.target.value)}
+                                    className="h-8 text-xs bg-black/20 border-border/50 dark:border-white/50"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[10px] uppercase tracking-wider text-foreground">
+                                    {t("modifiers.costPrice")}
+                                  </Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editOptionCostPriceStr}
+                                    onChange={(e) => setEditOptionCostPriceStr(e.target.value)}
+                                    placeholder={t("menu.costPricePlaceholder")}
                                     className="h-8 text-xs bg-black/20 border-border/50 dark:border-white/50"
                                   />
                                 </div>
@@ -957,30 +1013,12 @@ function MenuItemPreviewModal({
 }
 
 export default function Menu() {
-  const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
-
-  const isSuperAdmin = hasRole(user, "super_admin");
-  const showLocationSelector = canSelectLocation(user);
-  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    isSuperAdmin ? null : (canSelectLocation(user) ? null : (user?.locationId ?? null)),
-  );
+  const { locationId: selectedLocationId, setLocationId: setSelectedLocationId, locations, showLocationSelector } = useLocationWithUrlSync();
 
   const queryClient = useQueryClient();
-  const { data: locations } = useLocations();
   const { data: menuItems, isLoading, isError, refetch } = useMenuItems(selectedLocationId);
-
-  useEffect(() => {
-    const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
-    if (isSuperAdmin && locations?.length && !selectedLocationId) {
-      setSelectedLocationId(locations[0].id);
-    } else if (showLocationSelector && locations?.length && selectedLocationId == null) {
-      setSelectedLocationId(locations[0].id);
-    } else if (!showLocationSelector && userLocId != null && !selectedLocationId) {
-      setSelectedLocationId(userLocId);
-    }
-  }, [isSuperAdmin, showLocationSelector, locations, selectedLocationId, user]);
 
   const createMutation = useCreateMenuItem(selectedLocationId);
   const updateMutation = useUpdateMenuItem(selectedLocationId);
@@ -1003,6 +1041,7 @@ export default function Menu() {
   const [formData, setFormData] = useState({
     name: "",
     priceStr: "",
+    costPriceStr: "",
     category: "",
     isAvailable: true,
     imageUrl: "",
@@ -1014,6 +1053,7 @@ export default function Menu() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [editCategoryName, setEditCategoryName] = useState<string | null>(null);
   const [editCategoryNewName, setEditCategoryNewName] = useState("");
+  const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<string | null>(null);
 
   const existingCategories = useMemo(
     () =>
@@ -1131,15 +1171,20 @@ export default function Menu() {
 
   const openCreate = () => {
     setEditingId(null);
-    setFormData({ name: "", priceStr: "", category: "", isAvailable: true, imageUrl: "" });
+    setFormData({ name: "", priceStr: "", costPriceStr: "", category: "", isAvailable: true, imageUrl: "" });
     setIsDialogOpen(true);
   };
 
   const openEdit = (item: any) => {
     setEditingId(item.id);
+    const costCentsRaw = item.costPriceCents ?? item.cost_price_cents;
+    const costCents = typeof costCentsRaw === "number" ? costCentsRaw : (typeof costCentsRaw === "string" ? parseInt(costCentsRaw, 10) : null);
+    const costCentsNum = Number.isFinite(costCents) ? costCents : null;
+    const nextCostPriceStr = costCentsNum != null ? (costCentsNum / 100).toFixed(2) : "";
     setFormData({
       name: item.name,
       priceStr: (item.price / 100).toFixed(2),
+      costPriceStr: nextCostPriceStr,
       category: item.category,
       isAvailable: item.isAvailable,
       imageUrl: item.imageUrl ?? item.image_url ?? "",
@@ -1257,7 +1302,13 @@ export default function Menu() {
 
   const handleDeleteCategory = async (categoryName: string) => {
     if (!selectedLocationId) return;
-    if (!confirm(t("menu.confirmMoveItemsFromCategory").replace("{category}", categoryName).replace("{uncategorized}", t("menu.uncategorized")))) return;
+    setDeleteCategoryTarget(categoryName);
+  };
+
+  const confirmDeleteCategory = async () => {
+    const categoryName = deleteCategoryTarget;
+    setDeleteCategoryTarget(null);
+    if (!categoryName || !selectedLocationId) return;
     try {
       const res = await fetch(`/api/locations/${selectedLocationId}/categories/delete`, {
         method: "POST",
@@ -1266,7 +1317,13 @@ export default function Menu() {
         credentials: "include",
       });
       if (!res.ok) throw new Error((await res.json())?.message || "Failed");
-      await queryClient.invalidateQueries({ queryKey: ["menu-items", selectedLocationId] });
+      setNewCategoriesAdded((prev) => prev.filter((c) => c !== categoryName));
+      setCategoryOrder((prev) => {
+        const next = prev.filter((c) => c !== categoryName);
+        if (catOrderKey) localStorage.setItem(catOrderKey, JSON.stringify(next));
+        return next;
+      });
+      await queryClient.refetchQueries({ queryKey: ["menu-items", selectedLocationId] });
       toast({ title: t("menu.categoryRemoved") });
     } catch (err: any) {
       toast({ title: t("common.error"), description: err.message, variant: "destructive" });
@@ -1287,9 +1344,18 @@ export default function Menu() {
       return;
     }
 
+    const costPriceCents = formData.costPriceStr.trim()
+      ? Math.round(parseFloat(formData.costPriceStr) * 100)
+      : null;
+    if (formData.costPriceStr.trim() && (isNaN(costPriceCents!) || costPriceCents! < 0)) {
+      toast({ title: t("menu.invalidCostPrice"), variant: "destructive" });
+      return;
+    }
+
     const payload = {
       name: formData.name,
       price: priceCents,
+      costPriceCents: costPriceCents ?? null,
       category: formData.category.trim(),
       isAvailable: formData.isAvailable,
       locationId: selectedLocationId,
@@ -1298,7 +1364,15 @@ export default function Menu() {
 
     try {
       if (editingId) {
-        await updateMutation.mutateAsync({ id: editingId, ...payload });
+        const updatedItem = await updateMutation.mutateAsync({ id: editingId, ...payload });
+        if (updatedItem && selectedLocationId) {
+          queryClient.setQueryData<any[]>(["menu-items", selectedLocationId], (old) => {
+            if (!old) return old;
+            const costCents = (updatedItem as any).costPriceCents ?? (updatedItem as any).cost_price_cents ?? null;
+            const normalized = { ...updatedItem, costPriceCents: costCents };
+            return old.map((it) => (it.id === normalized.id ? { ...it, ...normalized } : it));
+          });
+        }
         toast({ title: t("menu.itemUpdated") });
       } else {
         await createMutation.mutateAsync(payload);
@@ -1331,9 +1405,9 @@ export default function Menu() {
             {showLocationSelector && (
               <Select
                 value={selectedLocationId?.toString() || ""}
-                onValueChange={(val) => setSelectedLocationId(parseInt(val))}
+                onValueChange={(val) => setSelectedLocationId(val ? parseInt(val) : null)}
               >
-                <SelectTrigger className="w-[200px] h-11 bg-card border-border/50 dark:border-white/50 rounded-xl">
+                <SelectTrigger className="h-11 min-w-[180px] bg-card border-border/50 dark:border-white/50 rounded-xl">
                   <SelectValue placeholder={t("menu.selectLocation")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1352,7 +1426,7 @@ export default function Menu() {
                   type="button"
                   variant="outline"
                   disabled={!selectedLocationId}
-                  className="rounded-xl h-11 shrink-0 whitespace-nowrap"
+                  className="rounded-xl h-11 px-4 shrink-0 border-border/50 dark:border-white/50"
                 >
                   {t("menu.addCategory")}
                 </Button>
@@ -1399,9 +1473,10 @@ export default function Menu() {
             <Button
               onClick={openCreate}
               disabled={!selectedLocationId}
-              className="rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+              className="rounded-xl h-11 px-4 shrink-0 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
             >
-              <Plus className="w-4 h-4 mr-2" /> {t("menu.addItem")}
+              <Plus className="w-4 h-4 mr-2 shrink-0" />
+              {t("menu.addItem")}
             </Button>
           </div>
         </div>
@@ -1774,6 +1849,20 @@ export default function Menu() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>{t("menu.costPrice")}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.costPriceStr}
+                    onChange={(e) =>
+                      setFormData({ ...formData, costPriceStr: e.target.value })
+                    }
+                    placeholder={t("menu.costPricePlaceholder")}
+                    className="bg-black/20 border-border/50 dark:border-white/50 focus:border-primary rounded-xl h-11"
+                  />
+                </div>
+                <div className="space-y-2 col-span-2">
                   <Label>{t("menu.category")}</Label>
                   <Select
                     value={formData.category || "__placeholder__"}
@@ -1913,6 +2002,32 @@ export default function Menu() {
               options: (g.options || []).filter((o: any) => o.isActive !== false),
             }))}
         />
+
+        <AlertDialog open={!!deleteCategoryTarget} onOpenChange={(open) => !open && setDeleteCategoryTarget(null)}>
+          <AlertDialogContent className="bg-card border-border/50 dark:border-white/50 rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("menu.confirmDeleteCategory")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteCategoryTarget &&
+                  t("menu.confirmMoveItemsFromCategory")
+                    .replace("{category}", deleteCategoryTarget)
+                    .replace("{uncategorized}", t("menu.uncategorized"))}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-xl">{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (deleteCategoryTarget) confirmDeleteCategory();
+                }}
+                className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {t("menu.deleteCategory")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </ProtectedRoute>
   );

@@ -96,16 +96,16 @@ export function DateTimePicker({
         <Button
           variant="outline"
           className={cn(
-            "min-h-9 h-auto py-2 justify-start text-left font-normal bg-background/50 leading-normal",
+            "min-h-9 h-auto py-2.5 px-4 justify-start text-left font-normal bg-background/50 leading-normal w-full",
             !value && "text-muted-foreground",
             className
           )}
         >
-          <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
-          {displayValue || placeholder}
+          <CalendarIcon className="mr-3 h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="truncate">{displayValue || placeholder}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0" align="start" sideOffset={8}>
         <div className="p-3">
           <Calendar
             mode="single"

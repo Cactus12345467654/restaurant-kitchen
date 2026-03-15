@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Copy } from "lucide-react";
-import { useAuth, canSelectLocation, hasRole } from "@/hooks/use-auth";
-import { useLocations } from "@/hooks/use-locations";
+import { useLocationWithUrlSync } from "@/hooks/use-location-with-url-sync";
 import {
   Select,
   SelectContent,
@@ -15,26 +13,9 @@ import { useTranslation } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
 
 export default function StatisticsLanding() {
-  const { user } = useAuth();
-  const { data: locations } = useLocations();
-  const isSuperAdmin = hasRole(user, "super_admin");
-  const showLocationSelector = canSelectLocation(user);
-  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-    isSuperAdmin ? null : (canSelectLocation(user) ? null : (user?.locationId ?? null)),
-  );
   const { t } = useTranslation();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (isSuperAdmin && locations?.length && !selectedLocationId) {
-      setSelectedLocationId(locations[0].id);
-    } else if (showLocationSelector && !selectedLocationId && locations?.length) {
-      setSelectedLocationId(locations[0].id);
-    } else if (!showLocationSelector) {
-      const userLocId = user?.locationId ?? (user as { location_id?: number })?.location_id ?? null;
-      if (userLocId != null && selectedLocationId !== userLocId) setSelectedLocationId(userLocId);
-    }
-  }, [isSuperAdmin, showLocationSelector, user, locations, selectedLocationId]);
+  const { locationId: selectedLocationId, setLocationId: setSelectedLocationId, locations, showLocationSelector } = useLocationWithUrlSync();
 
   return (
     <ProtectedRoute allowedRoles={["super_admin", "location_admin"]}>
@@ -49,7 +30,7 @@ export default function StatisticsLanding() {
         {showLocationSelector && locations && locations.length > 0 && (
           <Select
             value={selectedLocationId?.toString() ?? ""}
-            onValueChange={(v) => setSelectedLocationId(Number(v))}
+            onValueChange={(v) => setSelectedLocationId(v ? Number(v) : null)}
           >
             <SelectTrigger className="w-[260px]">
               <SelectValue placeholder={t("dashboard.selectLocation")} />
