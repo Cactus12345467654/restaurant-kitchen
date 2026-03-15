@@ -83,7 +83,7 @@ export const lv = {
   "digitalization.aiBenefits": "AI rīki palīdz automatizēt daļu no izstrādes procesa, optimizēt sistēmu funkcionalitāti un ātrāk pielāgot risinājumus konkrētā biznesa vajadzībām. Tas nozīmē, ka uzņēmums var iegūt modernu digitālu sistēmu ar labu veiktspēju, stabilu darbību un skaidru funkcionalitāti.",
   "digitalization.costTitle": "IZMAKSU OPTIMIZĀCIJA",
   "digitalization.costText": "Svarīgs ieguvums ir arī izmaksu optimizācija. Pateicoties efektīvākam izstrādes procesam un AI tehnoloģiju izmantošanai, iespējams piedāvāt kvalitatīvus risinājumus par konkurētspējīgu cenu.",
-  "digitalization.approachTitle": "MŪSU PIEĒJA",
+  "digitalization.approachTitle": "MŪSU PIEEJA",
   "digitalization.approachText": "Mūsu pieeja balstās uz trim galvenajiem principiem: ātra izstrāde, augsta kvalitāte un uzticamas garantijas. Katrs projekts tiek veidots ar mērķi nodrošināt stabilu sistēmas darbību, vienkāršu lietošanu un ilgtermiņa vērtību uzņēmumam.",
   "digitalization.conclusionTitle": "SECINĀJUMS",
   "digitalization.conclusionText": "Biznesa digitalizācija palīdz uzņēmumiem strādāt organizētāk, pieņemt lēmumus, balstoties uz datiem, un veidot efektīvākus procesus, kas ļauj uzņēmumam augt un attīstīties arī nākotnē.",
